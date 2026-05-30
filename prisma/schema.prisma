@@ -1,0 +1,87 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?  @db.Text
+  access_token       String?  @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?  @db.Text
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String       @id @default(cuid())
+  name          String?
+  email         String?      @unique
+  emailVerified DateTime?
+  image         String?
+  
+  // QuantGuide specific fields
+  currentStreak Int          @default(0)
+  highestStreak Int          @default(0)
+  lastActive    DateTime?
+  
+  accounts      Account[]
+  sessions      Session[]
+  submissions   Submission[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Problem {
+  id           String       @id @default(cuid())
+  title        String
+  description  String
+  topic        String
+  difficulty   String
+  source       String       @default("Quant Guide PDF")
+  solution     String       // Store string, but parse numeric later, or store as numeric if possible. User said "ans should be numeric only" so solution can be just string representation of the number.
+  fullSolution String?
+  hint         String?
+  createdAt    DateTime     @default(now())
+  submissions  Submission[]
+}
+
+model Submission {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  problemId   String
+  problem     Problem  @relation(fields: [problemId], references: [id])
+  isCorrect   Boolean
+  submittedAt DateTime @default(now())
+}
