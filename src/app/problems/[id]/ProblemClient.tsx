@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Lightbulb, CheckCircle2, XCircle, Loader2, Copy, Check } from 'lucide-react';
+import { ArrowLeft, Lightbulb, CheckCircle2, XCircle, Loader2, Copy, Check, Star } from 'lucide-react';
 
-export default function ProblemClient({ problem }: { problem: any }) {
+export default function ProblemClient({ problem, initialIsSaved = false }: { problem: any, initialIsSaved?: boolean }) {
+  const [isSaved, setIsSaved] = useState(initialIsSaved);
+  const [saving, setSaving] = useState(false);
   const [answer, setAnswer] = useState('');
   const [hint, setHint] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
@@ -94,6 +96,23 @@ export default function ProblemClient({ problem }: { problem: any }) {
     }
   };
 
+  const toggleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/problems/${problem.id}/save`, { method: 'POST' });
+      const data = await res.json();
+      if (data.error) {
+        alert(data.error);
+        return;
+      }
+      setIsSaved(data.saved);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-950 text-white p-6 font-sans">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -118,14 +137,25 @@ export default function ProblemClient({ problem }: { problem: any }) {
           
           <div className="flex items-center justify-between mb-8">
             <h1 className="text-4xl font-extrabold text-white tracking-tight">{problem.title}</h1>
-            <button
-              onClick={copyForAI}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl transition-colors border border-gray-700 hover:border-gray-600"
-              title="Copy Question & Solution Text"
-            >
-              {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-              <span className="text-sm font-medium">{copied ? 'Copied!' : 'Copy for AI'}</span>
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={toggleSave}
+                disabled={saving}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-colors border ${isSaved ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/20' : 'bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-700'}`}
+                title="Mark for Review"
+              >
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Star className={`w-4 h-4 ${isSaved ? 'fill-yellow-500' : ''}`} />}
+                <span className="text-sm font-medium">{isSaved ? 'Saved' : 'Save'}</span>
+              </button>
+              <button
+                onClick={copyForAI}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl transition-colors border border-gray-700 hover:border-gray-600"
+                title="Copy Question & Solution Text"
+              >
+                {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                <span className="text-sm font-medium">{copied ? 'Copied!' : 'Copy for AI'}</span>
+              </button>
+            </div>
           </div>
           <div className="mb-12 flex justify-start">
             <img 

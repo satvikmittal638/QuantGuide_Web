@@ -3,22 +3,21 @@
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Target, CheckCircle } from 'lucide-react';
+import { Target, CheckCircle, Star } from 'lucide-react';
+import { Problem } from '@prisma/client';
 
-type Problem = {
-  id: string;
-  title: string;
-  topic: string;
-  difficulty: string;
-  source: string;
-};
+// Omit full texts from Problem type since we optimized the payload
+type ProblemSummary = Pick<Problem, 'id' | 'title' | 'topic' | 'difficulty' | 'source'>;
 
-type Props = {
-  problems: Problem[];
+interface ProblemListProps {
+  problems: ProblemSummary[];
   solvedIds: string[];
-};
+  savedIds?: string[];
+}
 
-export default function ProblemList({ problems, solvedIds }: Props) {
+const statuses = ['All', 'Unsolved', 'Solved', 'Saved'];
+
+export default function ProblemList({ problems, solvedIds, savedIds = [] }: ProblemListProps) {
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -52,9 +51,9 @@ export default function ProblemList({ problems, solvedIds }: Props) {
   }, [problems]);
 
   const difficulties = ['All', 'easy', 'medium', 'hard'];
-  const statuses = ['All', 'Solved', 'Unsolved'];
 
   const solvedSet = useMemo(() => new Set(solvedIds), [solvedIds]);
+  const savedSet = useMemo(() => new Set(savedIds), [savedIds]);
 
   const filteredProblems = useMemo(() => {
     return problems.filter(p => {
@@ -63,13 +62,15 @@ export default function ProblemList({ problems, solvedIds }: Props) {
       const matchDifficulty = difficultyFilter === 'All' || p.difficulty.toLowerCase() === difficultyFilter;
       
       const isSolved = solvedSet.has(p.id);
+      const isSaved = savedSet.has(p.id);
       const matchStatus = statusFilter === 'All' || 
                           (statusFilter === 'Solved' && isSolved) || 
-                          (statusFilter === 'Unsolved' && !isSolved);
+                          (statusFilter === 'Unsolved' && !isSolved) ||
+                          (statusFilter === 'Saved' && isSaved);
                           
       return matchSearch && matchTopic && matchDifficulty && matchStatus;
     });
-  }, [problems, searchQuery, topicFilter, difficultyFilter, statusFilter, solvedSet]);
+  }, [problems, searchQuery, topicFilter, difficultyFilter, statusFilter, solvedSet, savedSet]);
 
   const totalPages = Math.ceil(filteredProblems.length / pageSize);
   const paginatedProblems = useMemo(() => {
@@ -157,6 +158,7 @@ export default function ProblemList({ problems, solvedIds }: Props) {
             ) : (
               paginatedProblems.map((problem, index) => {
                 const isSolved = solvedSet.has(problem.id);
+                const isSaved = savedSet.has(problem.id);
                 const diff = problem.difficulty.toLowerCase();
                 const diffColor = diff === 'easy' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
                                   diff === 'medium' ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 
@@ -183,6 +185,7 @@ export default function ProblemList({ problems, solvedIds }: Props) {
                         <span className="text-lg font-bold text-gray-100 group-hover:text-blue-400 transition-colors">
                           {problem.title}
                         </span>
+                        {isSaved && <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />}
                         {isSolved && <CheckCircle className="w-5 h-5 text-green-400" />}
                       </div>
                     </td>

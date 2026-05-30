@@ -6,22 +6,36 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
 export default async function Home() {
+  // OPTIMIZATION: Only fetch fields we need for the table to avoid massive JSON payloads
   const problems = await prisma.problem.findMany({
+    select: {
+      id: true,
+      title: true,
+      topic: true,
+      difficulty: true,
+      source: true,
+      createdAt: true,
+    },
     orderBy: { createdAt: 'desc' }
   });
   
   const session = await getServerSession(authOptions);
   let user = null;
   let solvedIds: string[] = [];
+  let savedIds: string[] = [];
   
   if (session?.user?.id) {
     user = await prisma.user.findUnique({ 
       where: { id: session.user.id },
-      include: { submissions: true }
+      include: { 
+        submissions: true,
+        savedProblems: true
+      }
     });
     
     if (user) {
       solvedIds = user.submissions.filter(s => s.isCorrect).map(s => s.problemId);
+      savedIds = user.savedProblems.map(s => s.problemId);
     }
   }
 
@@ -67,7 +81,7 @@ export default async function Home() {
         </div>
 
         {/* Problem List */}
-        <ProblemList problems={problems} solvedIds={solvedIds} />
+        <ProblemList problems={problems} solvedIds={solvedIds} savedIds={savedIds} />
       </div>
     </main>
   );
