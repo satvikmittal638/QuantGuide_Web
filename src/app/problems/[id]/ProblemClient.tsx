@@ -17,6 +17,7 @@ export default function ProblemClient({
   const [isSaved, setIsSaved] = useState(false);
   const [isStatusLoading, setIsStatusLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [togglingSolved, setTogglingSolved] = useState(false);
   const [answer, setAnswer] = useState('');
   const [hint, setHint] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
@@ -122,19 +123,38 @@ export default function ProblemClient({
   };
 
   const toggleSave = async () => {
-    setSaving(true);
     try {
-      const res = await fetch(`/api/problems/${problem.id}/save`, { method: 'POST' });
-      const data = await res.json();
-      if (data.error) {
-        alert(data.error);
-        return;
+      setSaving(true);
+      const res = await fetch(`/api/problems/${problem.id}/save`, {
+        method: 'POST',
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setIsSaved(data.saved);
       }
-      setIsSaved(data.saved);
-    } catch (err) {
-      console.error(err);
+    } catch (e) {
+      console.error(e);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleToggleSolved = async () => {
+    try {
+      setTogglingSolved(true);
+      const res = await fetch(`/api/problems/${problem.id}/toggle-solved`, {
+        method: 'POST',
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setIsCorrect(data.isSolved);
+        if (data.isSolved) setResult({ correct: true });
+        else setResult(null); // Reset result if unmarked
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setTogglingSolved(false);
     }
   };
 
@@ -188,6 +208,19 @@ export default function ProblemClient({
           <div className="flex items-center justify-between mb-8">
             <h1 className="text-4xl font-extrabold text-white tracking-tight">{problem.title}</h1>
             <div className="flex gap-3">
+              <button
+                onClick={handleToggleSolved}
+                disabled={togglingSolved || isStatusLoading}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-colors border ${isCorrect ? 'bg-green-500/10 text-green-400 border-green-500/20 hover:bg-green-500/20' : 'bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-700'}`}
+                title={isCorrect ? "Unmark as Solved" : "Mark as Solved manually"}
+              >
+                {(togglingSolved || isStatusLoading) ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <CheckCircle2 className={`w-4 h-4 ${isCorrect ? 'text-green-400' : ''}`} />
+                )}
+                <span className="text-sm font-medium">{isCorrect ? 'Solved' : 'Mark Solved'}</span>
+              </button>
               <button
                 onClick={toggleSave}
                 disabled={saving || isStatusLoading}
