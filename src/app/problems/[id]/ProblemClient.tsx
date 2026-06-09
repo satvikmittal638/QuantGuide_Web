@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import NextImage from 'next/image';
-import { ArrowLeft, ArrowRight, Lightbulb, CheckCircle2, XCircle, Loader2, Copy, Check, Star } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Lightbulb, CheckCircle2, XCircle, Loader2, Copy, Check, Star, Sparkles } from 'lucide-react';
 
 export default function ProblemClient({ 
   problem, 
@@ -20,6 +20,8 @@ export default function ProblemClient({
   const [togglingSolved, setTogglingSolved] = useState(false);
   const [answer, setAnswer] = useState('');
   const [hint, setHint] = useState<string | null>(null);
+  const [aiHint, setAiHint] = useState<string | null>(null);
+  const [isGeneratingHint, setIsGeneratingHint] = useState(false);
   const [checking, setChecking] = useState(false);
   const [result, setResult] = useState<{ correct: boolean } | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
@@ -121,6 +123,20 @@ export default function ProblemClient({
       console.error(e);
     } finally {
       setChecking(false);
+    }
+  };
+
+  const generateHint = async () => {
+    if (aiHint) return;
+    setIsGeneratingHint(true);
+    try {
+      const res = await fetch(`/api/problems/${problem.id}/hint`, { method: 'POST' });
+      const data = await res.json();
+      if (data.hint) setAiHint(data.hint);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsGeneratingHint(false);
     }
   };
 
@@ -291,13 +307,40 @@ export default function ProblemClient({
           </div>
           
           <div className="border-t border-gray-800 pt-8 mt-8">
-            <button
-              onClick={() => setHint(hint === 'show_solution' ? null : 'show_solution')}
-              className="flex items-center gap-2 text-gray-400 hover:text-yellow-400 transition-colors"
-            >
-              <Lightbulb className="w-5 h-5" />
-              <span>{hint === 'show_solution' ? 'Hide Full Solution' : 'View Full Solution'}</span>
-            </button>
+            <div className="flex items-center flex-wrap gap-4">
+              <button
+                onClick={() => setHint(hint === 'show_solution' ? null : 'show_solution')}
+                className="flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                <Lightbulb className="w-4 h-4" />
+                <span>{hint === 'show_solution' ? 'Hide Full Solution' : 'View Full Solution'}</span>
+              </button>
+
+              <div className="flex items-center">
+                <button
+                  onClick={generateHint}
+                  disabled={isGeneratingHint || !!aiHint}
+                  className="flex items-center gap-2 text-purple-400 hover:text-purple-300 transition-colors disabled:opacity-50"
+                >
+                  {isGeneratingHint ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                  <span>{isGeneratingHint ? 'Generating AI Hint...' : 'Generate Hint (AI)'}</span>
+                </button>
+                <span className="text-xs text-gray-500 italic ml-2">
+                  (Subject to user demand volume)
+                </span>
+              </div>
+            </div>
+
+            {aiHint && (
+              <div className="mt-4 p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl">
+                <p className="text-sm text-purple-200 leading-relaxed">
+                  <span className="font-semibold text-purple-400 flex items-center gap-2 mb-2">
+                    <Sparkles className="w-4 h-4" /> AI Hint:
+                  </span>
+                  {aiHint}
+                </p>
+              </div>
+            )}
             
             {hint === 'show_solution' && (
               <div className="mt-6 flex justify-start">
