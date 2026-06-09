@@ -1,8 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { notFound } from 'next/navigation';
 import ProblemClient from './ProblemClient';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { unstable_cache } from 'next/cache';
 
 const getCachedProblemData = unstable_cache(
@@ -43,20 +41,5 @@ export default async function ProblemPage(context: { params: Promise<{ id: strin
     notFound();
   }
 
-  const session = await getServerSession(authOptions);
-  let isSaved = false;
-
-  if (session?.user?.id) {
-    const saved = await prisma.savedProblem.findUnique({
-      where: {
-        userId_problemId: {
-          userId: session.user.id,
-          problemId: data.problem.id
-        }
-      }
-    });
-    if (saved) isSaved = true;
-  }
-
-  return <ProblemClient problem={data.problem} initialIsSaved={isSaved} nextId={data.nextId} prevId={data.prevId} />;
+  return <ProblemClient problem={data.problem} nextId={data.nextId} prevId={data.prevId} />;
 }

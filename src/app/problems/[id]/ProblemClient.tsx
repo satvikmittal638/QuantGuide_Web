@@ -1,28 +1,41 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import NextImage from 'next/image';
 import { ArrowLeft, ArrowRight, Lightbulb, CheckCircle2, XCircle, Loader2, Copy, Check, Star } from 'lucide-react';
 
 export default function ProblemClient({ 
   problem, 
-  initialIsSaved = false,
   nextId,
   prevId
 }: { 
   problem: any, 
-  initialIsSaved?: boolean,
   nextId?: string | null,
   prevId?: string | null
 }) {
-  const [isSaved, setIsSaved] = useState(initialIsSaved);
+  const [isSaved, setIsSaved] = useState(false);
+  const [isStatusLoading, setIsStatusLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [answer, setAnswer] = useState('');
   const [hint, setHint] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
   const [result, setResult] = useState<{ correct: boolean } | null>(null);
+  const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    fetch(`/api/problems/${problem.id}/status`)
+      .then(res => res.json())
+      .then(data => {
+        setIsSaved(data.isSaved);
+        if (data.isSolved) {
+          setIsCorrect(true);
+        }
+        setIsStatusLoading(false);
+      })
+      .catch(() => setIsStatusLoading(false));
+  }, [problem.id]);
 
   const loadImage = (src: string): Promise<HTMLImageElement | null> => {
     return new Promise((resolve) => {
@@ -100,6 +113,7 @@ export default function ProblemClient({
         return;
       }
       setResult({ correct: data.correct });
+      if (data.correct) setIsCorrect(true);
     } catch (e) {
       console.error(e);
     } finally {
@@ -176,11 +190,15 @@ export default function ProblemClient({
             <div className="flex gap-3">
               <button
                 onClick={toggleSave}
-                disabled={saving}
+                disabled={saving || isStatusLoading}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-colors border ${isSaved ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/20' : 'bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-700'}`}
                 title="Mark for Review"
               >
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Star className={`w-4 h-4 ${isSaved ? 'fill-yellow-500' : ''}`} />}
+                {(saving || isStatusLoading) ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Star className={`w-4 h-4 ${isSaved ? 'fill-yellow-500' : ''}`} />
+                )}
                 <span className="text-sm font-medium">{isSaved ? 'Saved' : 'Save'}</span>
               </button>
               <button
