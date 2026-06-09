@@ -16,7 +16,7 @@ const getCachedProblems = unstable_cache(
         source: true,
         createdAt: true,
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'asc' }
     });
   },
   ['dashboard-problems'],

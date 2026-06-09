@@ -18,18 +18,18 @@ const getCachedProblemData = unstable_cache(
     const problem = await prisma.problem.findUnique({ where: { id } });
     if (!problem) return null;
     
-    // In our dashboard, problems are sorted by createdAt 'desc'
-    // So "Next" on the dashboard is older (createdAt < problem.createdAt)
+    // In our dashboard, problems are sorted by createdAt 'asc'
+    // So "Next" on the dashboard is newer (createdAt > problem.createdAt)
     const nextProblem = await prisma.problem.findFirst({
-      where: { createdAt: { lt: problem.createdAt } },
-      orderBy: { createdAt: 'desc' },
+      where: { createdAt: { gt: problem.createdAt } },
+      orderBy: { createdAt: 'asc' },
       select: { id: true }
     });
     
-    // "Previous" on the dashboard is newer (createdAt > problem.createdAt)
+    // "Previous" on the dashboard is older (createdAt < problem.createdAt)
     const prevProblem = await prisma.problem.findFirst({
-      where: { createdAt: { gt: problem.createdAt } },
-      orderBy: { createdAt: 'asc' },
+      where: { createdAt: { lt: problem.createdAt } },
+      orderBy: { createdAt: 'desc' },
       select: { id: true }
     });
 
