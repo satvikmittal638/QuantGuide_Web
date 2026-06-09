@@ -261,14 +261,13 @@ export default function ProblemClient({
           </div>
           
           <div className="border-t border-gray-800 pt-8 mt-8">
-            <h3 className="text-lg font-medium text-gray-200 mb-4">Your Answer (Numeric Only)</h3>
+            <h3 className="text-lg font-medium text-gray-200 mb-4">Your Answer (Numeric or Fraction)</h3>
             <div className="flex gap-4">
               <input
-                type="number"
-                step="any"
+                type="text"
                 value={answer}
                 onChange={(e) => setAnswer(e.target.value)}
-                placeholder="e.g. 42"
+                placeholder="e.g. 42 or 1/2"
                 className="flex-1 bg-gray-950 border border-gray-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-white placeholder-gray-600"
                 onKeyDown={(e) => e.key === 'Enter' && checkAnswer()}
               />

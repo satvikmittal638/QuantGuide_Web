@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Target, CheckCircle, Star, Flame, Trophy } from 'lucide-react';
+import { Target, CheckCircle, Star, Flame, Trophy, BarChart3, PieChart } from 'lucide-react';
 
 interface Problem {
   id: string;
@@ -129,6 +129,31 @@ export default function ProblemList({ problems }: ProblemListProps) {
 
   const statuses = ['All', 'Unsolved', 'Solved', 'Saved'];
 
+  const stats = useMemo(() => {
+    const difficultyCounts = { Easy: { total: 0, solved: 0 }, Medium: { total: 0, solved: 0 }, Hard: { total: 0, solved: 0 } };
+    const topicCounts: Record<string, { total: 0, solved: 0 }> = {};
+
+    // Use Set for O(1) lookups
+    const solvedSetLocal = new Set(solvedIds);
+
+    problems.forEach(p => {
+      const isSolved = solvedSetLocal.has(p.id);
+      
+      // Difficulty
+      if (difficultyCounts[p.difficulty as keyof typeof difficultyCounts]) {
+        difficultyCounts[p.difficulty as keyof typeof difficultyCounts].total++;
+        if (isSolved) difficultyCounts[p.difficulty as keyof typeof difficultyCounts].solved++;
+      }
+
+      // Topic
+      if (!topicCounts[p.topic]) topicCounts[p.topic] = { total: 0, solved: 0 };
+      topicCounts[p.topic].total++;
+      if (isSolved) topicCounts[p.topic].solved++;
+    });
+
+    return { difficultyCounts, topicCounts };
+  }, [problems, solvedIds]);
+
   if (!isMounted) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -139,27 +164,92 @@ export default function ProblemList({ problems }: ProblemListProps) {
 
   return (
     <div>
-      {isStatusLoaded && (currentStreak > 0 || highestStreak > 0) && (
-        <div className="flex flex-col md:flex-row gap-4 mb-8">
-           <div className="flex items-center gap-3 bg-gray-800/50 rounded-2xl p-4 border border-gray-700/50 w-full md:w-auto">
-             <div className="bg-orange-500/20 p-3 rounded-xl">
-               <Flame className="w-6 h-6 text-orange-400" />
-             </div>
-             <div>
-               <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Current Streak</p>
-               <p className="text-2xl font-bold text-white">{currentStreak} <span className="text-sm text-gray-500 font-normal">days</span></p>
-             </div>
-           </div>
-           
-           <div className="flex items-center gap-3 bg-gray-800/50 rounded-2xl p-4 border border-gray-700/50 w-full md:w-auto">
-             <div className="bg-yellow-500/20 p-3 rounded-xl">
-               <Trophy className="w-6 h-6 text-yellow-400" />
-             </div>
-             <div>
-               <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Best Streak</p>
-               <p className="text-2xl font-bold text-white">{highestStreak} <span className="text-sm text-gray-500 font-normal">days</span></p>
-             </div>
-           </div>
+      {isStatusLoaded && (
+        <div className="mb-10 space-y-6">
+          {/* Streaks Row */}
+          {(currentStreak > 0 || highestStreak > 0) && (
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex items-center gap-3 bg-gray-800/50 rounded-2xl p-4 border border-gray-700/50 w-full md:w-auto">
+                <div className="bg-orange-500/20 p-3 rounded-xl">
+                  <Flame className="w-6 h-6 text-orange-400" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Current Streak</p>
+                  <p className="text-2xl font-bold text-white">{currentStreak} <span className="text-sm text-gray-500 font-normal">days</span></p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3 bg-gray-800/50 rounded-2xl p-4 border border-gray-700/50 w-full md:w-auto">
+                <div className="bg-yellow-500/20 p-3 rounded-xl">
+                  <Trophy className="w-6 h-6 text-yellow-400" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Best Streak</p>
+                  <p className="text-2xl font-bold text-white">{highestStreak} <span className="text-sm text-gray-500 font-normal">days</span></p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Stats Breakdown Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* Difficulty Breakdown */}
+            <div className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700/50 lg:col-span-1">
+              <h3 className="text-lg font-bold flex items-center gap-2 mb-6">
+                <BarChart3 className="w-5 h-5 text-blue-400" />
+                Difficulty Progress
+              </h3>
+              <div className="space-y-5">
+                {[
+                  { label: 'Easy', data: stats.difficultyCounts.Easy, colorClass: 'bg-emerald-500' },
+                  { label: 'Medium', data: stats.difficultyCounts.Medium, colorClass: 'bg-yellow-500' },
+                  { label: 'Hard', data: stats.difficultyCounts.Hard, colorClass: 'bg-red-500' },
+                ].map(item => (
+                  <div key={item.label}>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="font-medium text-gray-300">{item.label}</span>
+                      <span className="text-gray-400">{item.data.solved} <span className="text-gray-600">/</span> {item.data.total}</span>
+                    </div>
+                    <div className="w-full h-2 bg-gray-900 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full ${item.colorClass} rounded-full transition-all duration-1000`}
+                        style={{ width: `${item.data.total ? (item.data.solved / item.data.total) * 100 : 0}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Topic Breakdown */}
+            <div className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700/50 lg:col-span-2">
+              <h3 className="text-lg font-bold flex items-center gap-2 mb-6">
+                <PieChart className="w-5 h-5 text-purple-400" />
+                Topic Mastery
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                {Object.entries(stats.topicCounts)
+                  .sort((a, b) => b[1].total - a[1].total)
+                  .slice(0, 8)
+                  .map(([topic, data]) => (
+                  <div key={topic}>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="font-medium text-gray-300 truncate pr-4">{topic}</span>
+                      <span className="text-gray-400 whitespace-nowrap">{data.solved} <span className="text-gray-600">/</span> {data.total}</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-gray-900 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-purple-500 rounded-full transition-all duration-1000"
+                        style={{ width: `${data.total ? (data.solved / data.total) * 100 : 0}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
         </div>
       )}
 
