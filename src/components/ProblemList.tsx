@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Target, CheckCircle, Star } from 'lucide-react';
@@ -25,7 +25,21 @@ export default function ProblemList({ problems, solvedIds, savedIds = [] }: Prob
   const [difficultyFilter, setDifficultyFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const pageSize = 20;
+
+  // Global keyboard shortcut for search focus
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Focus search on '/' press if not typing in an input
+      if (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     setSearchQuery(localStorage.getItem('qg_search') || '');
@@ -105,13 +119,16 @@ export default function ProblemList({ problems, solvedIds, savedIds = [] }: Prob
         </h2>
         
         <div className="flex flex-wrap items-center gap-3">
-          <input 
-            type="text" 
-            placeholder="Search problems..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-gray-900 border border-gray-700 text-sm rounded-lg px-3 py-2 text-gray-300 focus:outline-none focus:border-blue-500 min-w-[200px]"
-          />
+          <div className="relative">
+            <input 
+              ref={searchInputRef}
+              type="text" 
+              placeholder="Search problems... (Press '/' to focus)"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="bg-gray-900 border border-gray-700 text-sm rounded-lg px-3 py-2 text-gray-300 focus:outline-none focus:border-blue-500 min-w-[200px]"
+            />
+          </div>
           
           <select 
             value={topicFilter} 
@@ -177,14 +194,14 @@ export default function ProblemList({ problems, solvedIds, savedIds = [] }: Prob
                 return (
                   <tr 
                     key={problem.id} 
-                    onClick={() => router.push(`/problems/${problem.id}`)}
-                    className="hover:bg-gray-800/60 cursor-pointer transition-all duration-200 group"
+                    className="hover:bg-gray-800/60 transition-all duration-200 group relative"
                   >
-                    <td className="py-6 px-8 text-gray-500 text-base text-center font-medium">
+                    <td className="py-6 px-8 text-gray-500 text-base text-center font-medium relative z-10">
                       {globalIndex}
                     </td>
-                    <td className="py-6 px-8">
-                      <div className="flex items-center gap-3">
+                    <td className="py-6 px-8 relative">
+                      <Link href={`/problems/${problem.id}`} className="absolute inset-0 z-0" aria-label={`Go to ${problem.title}`} />
+                      <div className="flex items-center gap-3 relative z-10">
                         <span className="text-lg font-bold text-gray-100 group-hover:text-blue-400 transition-colors">
                           {problem.title}
                         </span>

@@ -2,9 +2,20 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Lightbulb, CheckCircle2, XCircle, Loader2, Copy, Check, Star } from 'lucide-react';
+import NextImage from 'next/image';
+import { ArrowLeft, ArrowRight, Lightbulb, CheckCircle2, XCircle, Loader2, Copy, Check, Star } from 'lucide-react';
 
-export default function ProblemClient({ problem, initialIsSaved = false }: { problem: any, initialIsSaved?: boolean }) {
+export default function ProblemClient({ 
+  problem, 
+  initialIsSaved = false,
+  nextId,
+  prevId
+}: { 
+  problem: any, 
+  initialIsSaved?: boolean,
+  nextId?: string | null,
+  prevId?: string | null
+}) {
   const [isSaved, setIsSaved] = useState(initialIsSaved);
   const [saving, setSaving] = useState(false);
   const [answer, setAnswer] = useState('');
@@ -15,7 +26,7 @@ export default function ProblemClient({ problem, initialIsSaved = false }: { pro
 
   const loadImage = (src: string): Promise<HTMLImageElement | null> => {
     return new Promise((resolve) => {
-      const img = new Image();
+      const img = new window.Image();
       img.onload = () => resolve(img);
       img.onerror = () => resolve(null);
       img.src = src;
@@ -116,9 +127,34 @@ export default function ProblemClient({ problem, initialIsSaved = false }: { pro
   return (
     <div className="min-h-screen bg-gray-950 text-white p-6 font-sans">
       <div className="max-w-4xl mx-auto space-y-6">
-        <Link href="/" className="inline-flex items-center gap-2 text-gray-400 hover:text-blue-400 transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Back to Dashboard
-        </Link>
+        <div className="flex justify-between items-center mb-8 gap-4">
+          <Link 
+            href="/" 
+            className="inline-flex items-center text-gray-400 hover:text-white transition-colors group px-2 py-1 -ml-2 rounded"
+          >
+            <ArrowLeft className="w-5 h-5 mr-2 transform group-hover:-translate-x-1 transition-transform" />
+            Back to Dashboard
+          </Link>
+          
+          <div className="flex items-center gap-3">
+            {prevId && (
+              <Link 
+                href={`/problems/${prevId}`}
+                className="inline-flex items-center px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg transition-colors text-sm font-medium"
+              >
+                <ArrowLeft className="w-4 h-4 mr-1.5" /> Prev
+              </Link>
+            )}
+            {nextId && (
+              <Link 
+                href={`/problems/${nextId}`}
+                className="inline-flex items-center px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg transition-colors text-sm font-medium"
+              >
+                Next <ArrowRight className="w-4 h-4 ml-1.5" />
+              </Link>
+            )}
+          </div>
+        </div>
         
         <div className="bg-gray-900/50 backdrop-blur-xl border border-gray-800 rounded-3xl p-8 shadow-2xl">
           <div className="flex gap-3 mb-4">
@@ -158,9 +194,14 @@ export default function ProblemClient({ problem, initialIsSaved = false }: { pro
             </div>
           </div>
           <div className="mb-12 flex justify-start">
-            <img 
+            <NextImage 
               src={`/images/problems/${problem.title.replace(/ /g, '_').replace(/\//g, '').replace(/:/g, '')}.png`}
               alt={problem.title}
+              width={0}
+              height={0}
+              sizes="100vw"
+              priority={true}
+              style={{ width: '100%', height: 'auto' }}
               className="max-w-full h-auto invert hue-rotate-180 mix-blend-screen opacity-90"
               onError={(e) => { e.currentTarget.style.display = 'none'; }}
             />
@@ -208,9 +249,14 @@ export default function ProblemClient({ problem, initialIsSaved = false }: { pro
             
             {hint === 'show_solution' && (
               <div className="mt-6 flex justify-start">
-                <img 
+                <NextImage 
                   src={`/images/solutions/${problem.title.replace(/ /g, '_').replace(/\//g, '').replace(/:/g, '')}.png`}
                   alt="Solution"
+                  width={0}
+                  height={0}
+                  sizes="100vw"
+                  priority={true}
+                  style={{ width: '100%', height: 'auto' }}
                   className="max-w-full h-auto invert hue-rotate-180 mix-blend-screen opacity-90"
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />

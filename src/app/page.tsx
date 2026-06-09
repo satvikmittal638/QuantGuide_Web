@@ -4,21 +4,30 @@ import ProblemList from '@/components/ProblemList';
 import LoginButton from '@/components/LoginButton';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { unstable_cache } from 'next/cache';
+
+const getCachedProblems = unstable_cache(
+  async () => {
+    return prisma.problem.findMany({
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        topic: true,
+        difficulty: true,
+        source: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+  },
+  ['dashboard-problems'],
+  { revalidate: 3600 } // Cache for 1 hour
+);
 
 export default async function Home() {
-  // OPTIMIZATION: Only fetch fields we need for the table to avoid massive JSON payloads
-  const problems = await prisma.problem.findMany({
-    select: {
-      id: true,
-      title: true,
-      description: true,
-      topic: true,
-      difficulty: true,
-      source: true,
-      createdAt: true,
-    },
-    orderBy: { createdAt: 'desc' }
-  });
+  // OPTIMIZATION: Fetch cached problems from Edge Network
+  const problems = await getCachedProblems();
   
   const session = await getServerSession(authOptions);
   let user = null;
