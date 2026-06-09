@@ -194,20 +194,20 @@ export default function ProblemList({ problems, solvedIds, savedIds = [] }: Prob
                 return (
                   <tr 
                     key={problem.id} 
-                    className="hover:bg-gray-800/60 transition-all duration-200 group relative"
+                    onClick={() => router.push(`/problems/${problem.id}`)}
+                    className="hover:bg-gray-800/60 transition-all duration-200 group cursor-pointer"
                   >
-                    <td className="py-6 px-8 text-gray-500 text-base text-center font-medium relative z-10">
+                    <td className="py-6 px-8 text-gray-500 text-base text-center font-medium">
                       {globalIndex}
                     </td>
-                    <td className="py-6 px-8 relative">
-                      <Link href={`/problems/${problem.id}`} className="absolute inset-0 z-0" aria-label={`Go to ${problem.title}`} />
-                      <div className="flex items-center gap-3 relative z-10">
+                    <td className="py-6 px-8">
+                      <Link href={`/problems/${problem.id}`} className="flex items-center gap-3" aria-label={`Go to ${problem.title}`}>
                         <span className="text-lg font-bold text-gray-100 group-hover:text-blue-400 transition-colors">
                           {problem.title}
                         </span>
                         {isSaved && <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />}
                         {isSolved && <CheckCircle className="w-5 h-5 text-green-400" />}
-                      </div>
+                      </Link>
                     </td>
                     <td className="py-6 px-8">
                       <span className={`px-4 py-1.5 text-xs font-bold rounded-full border tracking-wider capitalize ${topicColor}`}>
