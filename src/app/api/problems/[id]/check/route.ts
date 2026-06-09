@@ -12,10 +12,25 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
     const problem = await prisma.problem.findUnique({ where: { id: params.id } });
     if (!problem) return NextResponse.json({ error: 'Problem not found' }, { status: 404 });
     
-    const submittedNum = parseFloat(answer);
-    const correctNum = parseFloat(problem.solution);
+    const parseMath = (str: string) => {
+      try {
+        if (!str) return NaN;
+        // Simple fraction support
+        if (str.includes('/')) {
+          const [num, den] = str.split('/');
+          return parseFloat(num) / parseFloat(den);
+        }
+        return parseFloat(str);
+      } catch {
+        return NaN;
+      }
+    };
+
+    const submittedNum = parseMath(answer);
+    const correctNum = parseMath(problem.solution);
     
-    const isCorrect = !isNaN(submittedNum) && !isNaN(correctNum) && Math.abs(submittedNum - correctNum) < 1e-7;
+    // Increase tolerance to 1e-3 for rounding differences (e.g. 0.5039 vs 0.503937)
+    const isCorrect = !isNaN(submittedNum) && !isNaN(correctNum) && Math.abs(submittedNum - correctNum) < 1e-3;
 
     const session = await getServerSession(authOptions);
     if (!session || !session.user || !session.user.id) {

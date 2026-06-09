@@ -7,7 +7,7 @@ import { Target, CheckCircle, Star } from 'lucide-react';
 import { Problem } from '@prisma/client';
 
 // Omit full texts from Problem type since we optimized the payload
-type ProblemSummary = Pick<Problem, 'id' | 'title' | 'topic' | 'difficulty' | 'source'>;
+type ProblemSummary = Pick<Problem, 'id' | 'title' | 'description' | 'topic' | 'difficulty' | 'source'>;
 
 interface ProblemListProps {
   problems: ProblemSummary[];
@@ -57,7 +57,10 @@ export default function ProblemList({ problems, solvedIds, savedIds = [] }: Prob
 
   const filteredProblems = useMemo(() => {
     return problems.filter(p => {
-      const matchSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase());
+      const q = searchQuery.toLowerCase();
+      const matchSearch = p.title.toLowerCase().includes(q) || 
+                          (p.description && p.description.toLowerCase().includes(q));
+      
       const matchTopic = topicFilter === 'All' || p.topic.toLowerCase() === topicFilter;
       const matchDifficulty = difficultyFilter === 'All' || p.difficulty.toLowerCase() === difficultyFilter;
       

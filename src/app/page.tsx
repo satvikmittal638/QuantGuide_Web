@@ -11,6 +11,7 @@ export default async function Home() {
     select: {
       id: true,
       title: true,
+      description: true,
       topic: true,
       difficulty: true,
       source: true,
