@@ -3,21 +3,23 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Target, CheckCircle, Star } from 'lucide-react';
-import { Problem } from '@prisma/client';
+import { Target, CheckCircle, Star, Flame, Trophy } from 'lucide-react';
 
-// Omit full texts from Problem type since we optimized the payload
-type ProblemSummary = Pick<Problem, 'id' | 'title' | 'description' | 'topic' | 'difficulty' | 'source'>;
-
-interface ProblemListProps {
-  problems: ProblemSummary[];
-  solvedIds: string[];
-  savedIds?: string[];
+interface Problem {
+  id: string;
+  title: string;
+  description: string;
+  topic: string;
+  difficulty: string;
+  source: string;
+  createdAt: Date;
 }
 
-const statuses = ['All', 'Unsolved', 'Solved', 'Saved'];
+interface ProblemListProps {
+  problems: Problem[];
+}
 
-export default function ProblemList({ problems, solvedIds, savedIds = [] }: ProblemListProps) {
+export default function ProblemList({ problems }: ProblemListProps) {
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -25,6 +27,11 @@ export default function ProblemList({ problems, solvedIds, savedIds = [] }: Prob
   const [difficultyFilter, setDifficultyFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
+  const [solvedIds, setSolvedIds] = useState<string[]>([]);
+  const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const [highestStreak, setHighestStreak] = useState(0);
+  const [isStatusLoaded, setIsStatusLoaded] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const pageSize = 20;
 
@@ -46,8 +53,26 @@ export default function ProblemList({ problems, solvedIds, savedIds = [] }: Prob
     setTopicFilter(localStorage.getItem('qg_topic') || 'All');
     setDifficultyFilter(localStorage.getItem('qg_difficulty') || 'All');
     setStatusFilter(localStorage.getItem('qg_status') || 'All');
-    setCurrentPage(parseInt(localStorage.getItem('qg_page') || '1', 10));
+    
+    const page = localStorage.getItem('qg_page');
+    if (page) setCurrentPage(parseInt(page));
+    
     setIsMounted(true);
+
+    // Fetch user status
+    fetch('/api/user/status')
+      .then(res => res.json())
+      .then(data => {
+        setSolvedIds(data.solvedIds || []);
+        setSavedIds(data.savedIds || []);
+        setCurrentStreak(data.currentStreak || 0);
+        setHighestStreak(data.highestStreak || 0);
+        setIsStatusLoaded(true);
+      })
+      .catch(err => {
+        console.error('Failed to fetch user status', err);
+        setIsStatusLoaded(true);
+      });
   }, []);
 
   useEffect(() => {
@@ -102,9 +127,11 @@ export default function ProblemList({ problems, solvedIds, savedIds = [] }: Prob
     }
   }, [searchQuery, topicFilter, difficultyFilter, statusFilter, isMounted]);
 
+  const statuses = ['All', 'Unsolved', 'Solved', 'Saved'];
+
   if (!isMounted) {
     return (
-      <div className="flex justify-center items-center py-24">
+      <div className="flex justify-center items-center h-64">
         <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
@@ -112,6 +139,30 @@ export default function ProblemList({ problems, solvedIds, savedIds = [] }: Prob
 
   return (
     <div>
+      {isStatusLoaded && (currentStreak > 0 || highestStreak > 0) && (
+        <div className="flex flex-col md:flex-row gap-4 mb-8">
+           <div className="flex items-center gap-3 bg-gray-800/50 rounded-2xl p-4 border border-gray-700/50 w-full md:w-auto">
+             <div className="bg-orange-500/20 p-3 rounded-xl">
+               <Flame className="w-6 h-6 text-orange-400" />
+             </div>
+             <div>
+               <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Current Streak</p>
+               <p className="text-2xl font-bold text-white">{currentStreak} <span className="text-sm text-gray-500 font-normal">days</span></p>
+             </div>
+           </div>
+           
+           <div className="flex items-center gap-3 bg-gray-800/50 rounded-2xl p-4 border border-gray-700/50 w-full md:w-auto">
+             <div className="bg-yellow-500/20 p-3 rounded-xl">
+               <Trophy className="w-6 h-6 text-yellow-400" />
+             </div>
+             <div>
+               <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Best Streak</p>
+               <p className="text-2xl font-bold text-white">{highestStreak} <span className="text-sm text-gray-500 font-normal">days</span></p>
+             </div>
+           </div>
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
         <h2 className="text-2xl font-bold flex items-center gap-2">
           <Target className="w-6 h-6 text-blue-400" />

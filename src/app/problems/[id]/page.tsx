@@ -3,6 +3,16 @@ import { notFound } from 'next/navigation';
 import ProblemClient from './ProblemClient';
 import { unstable_cache } from 'next/cache';
 
+export const dynamic = 'force-static';
+export const revalidate = 86400; // Revalidate once a day just in case
+
+export async function generateStaticParams() {
+  const problems = await prisma.problem.findMany({ select: { id: true } });
+  return problems.map((problem) => ({
+    id: problem.id,
+  }));
+}
+
 const getCachedProblemData = unstable_cache(
   async (id: string) => {
     const problem = await prisma.problem.findUnique({ where: { id } });

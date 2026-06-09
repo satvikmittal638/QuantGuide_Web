@@ -49,8 +49,10 @@ export default function ProblemClient({
 
   const copyForAI = async () => {
     try {
-      const qSrc = `/images/problems/${problem.title.replace(/ /g, '_').replace(/\//g, '').replace(/:/g, '')}.png`;
-      const sSrc = `/images/solutions/${problem.title.replace(/ /g, '_').replace(/\//g, '').replace(/:/g, '')}.png`;
+      const baseName = problem.title.replace(/ /g, '_').replace(/\//g, '').replace(/:/g, '');
+      const encodedName = encodeURIComponent(baseName);
+      const qSrc = `/images/problems/${encodedName}.png`;
+      const sSrc = `/images/solutions/${encodedName}.png`;
 
       const [qImg, sImg] = await Promise.all([
         loadImage(qSrc),
@@ -246,7 +248,7 @@ export default function ProblemClient({
           </div>
           <div className="mb-12 flex justify-start">
             <NextImage 
-              src={`/images/problems/${problem.title.replace(/ /g, '_').replace(/\//g, '').replace(/:/g, '')}.png`}
+              src={`/images/problems/${encodeURIComponent(problem.title.replace(/ /g, '_').replace(/\//g, '').replace(/:/g, ''))}.png`}
               alt={problem.title}
               width={0}
               height={0}
@@ -301,7 +303,7 @@ export default function ProblemClient({
             {hint === 'show_solution' && (
               <div className="mt-6 flex justify-start">
                 <NextImage 
-                  src={`/images/solutions/${problem.title.replace(/ /g, '_').replace(/\//g, '').replace(/:/g, '')}.png`}
+                  src={`/images/solutions/${encodeURIComponent(problem.title.replace(/ /g, '_').replace(/\//g, '').replace(/:/g, ''))}.png`}
                   alt="Solution"
                   width={0}
                   height={0}
