@@ -3,7 +3,8 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Target, CheckCircle, Star, Flame, Trophy, BarChart3, PieChart } from 'lucide-react';
+import { Target, CheckCircle, Star, Flame, Trophy, BarChart3, PieChart, Calendar } from 'lucide-react';
+import { ActivityCalendar } from 'react-activity-calendar';
 
 interface Problem {
   id: string;
@@ -31,6 +32,7 @@ export default function ProblemList({ problems }: ProblemListProps) {
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [currentStreak, setCurrentStreak] = useState(0);
   const [highestStreak, setHighestStreak] = useState(0);
+  const [heatmapData, setHeatmapData] = useState<any[]>([]);
   const [isStatusLoaded, setIsStatusLoaded] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const pageSize = 20;
@@ -67,6 +69,7 @@ export default function ProblemList({ problems }: ProblemListProps) {
         setSavedIds(data.savedIds || []);
         setCurrentStreak(data.currentStreak || 0);
         setHighestStreak(data.highestStreak || 0);
+        setHeatmapData(data.heatmapData || []);
         setIsStatusLoaded(true);
       })
       .catch(err => {
@@ -250,6 +253,29 @@ export default function ProblemList({ problems }: ProblemListProps) {
             </div>
 
           </div>
+
+          {/* Heatmap Row */}
+          {heatmapData.length > 0 && (
+            <div className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700/50 w-full overflow-x-auto">
+              <h3 className="text-lg font-bold flex items-center gap-2 mb-6">
+                <Calendar className="w-5 h-5 text-green-400" />
+                Activity Heatmap
+              </h3>
+              <div className="min-w-[800px]">
+                <ActivityCalendar 
+                  data={heatmapData} 
+                  theme={{
+                    light: ['#1f2937', '#0e4429', '#006d32', '#26a641', '#39d353'],
+                    dark: ['#1f2937', '#0e4429', '#006d32', '#26a641', '#39d353']
+                  }}
+                  colorScheme="dark"
+                  labels={{
+                    totalCount: '{{count}} submissions in the last year',
+                  }}
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -25,10 +25,27 @@ export async function GET() {
   const solvedIds = user.submissions.filter(s => s.isCorrect).map(s => s.problemId);
   const savedIds = user.savedProblems.map(s => s.problemId);
 
+  // Calculate heatmap data (YYYY-MM-DD format)
+  const heatmapDataMap: Record<string, number> = {};
+  user.submissions.forEach(sub => {
+    if (sub.isCorrect) {
+      // Get date string in YYYY-MM-DD format
+      const dateStr = sub.submittedAt.toISOString().split('T')[0];
+      heatmapDataMap[dateStr] = (heatmapDataMap[dateStr] || 0) + 1;
+    }
+  });
+
+  const heatmapData = Object.keys(heatmapDataMap).map(date => ({
+    date,
+    count: heatmapDataMap[date],
+    level: Math.min(4, Math.ceil(heatmapDataMap[date] / 2)) // simple level calculation (max level 4)
+  }));
+
   return NextResponse.json({ 
     solvedIds,
     savedIds,
     currentStreak: user.currentStreak,
-    highestStreak: user.highestStreak
+    highestStreak: user.highestStreak,
+    heatmapData
   });
 }

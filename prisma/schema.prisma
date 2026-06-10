@@ -54,6 +54,7 @@ model User {
   sessions      Session[]
   submissions   Submission[]
   savedProblems SavedProblem[]
+  comments      Comment[]
 }
 
 model VerificationToken {
@@ -74,9 +75,11 @@ model Problem {
   solution     String       // Store string, but parse numeric later, or store as numeric if possible. User said "ans should be numeric only" so solution can be just string representation of the number.
   fullSolution String?
   hint         String?
-  createdAt    DateTime       @default(now())
-  submissions  Submission[]
+  createdAt    DateTime     @default(now())
+
+  submissions   Submission[]
   savedProblems SavedProblem[]
+  comments      Comment[]
 }
 
 model SavedProblem {
@@ -98,4 +101,15 @@ model Submission {
   problem     Problem  @relation(fields: [problemId], references: [id])
   isCorrect   Boolean
   submittedAt DateTime @default(now())
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  text      String   @db.Text
+  userId    String
+  problemId String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problem   Problem  @relation(fields: [problemId], references: [id], onDelete: Cascade)
 }

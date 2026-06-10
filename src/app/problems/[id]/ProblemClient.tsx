@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import NextImage from 'next/image';
-import { ArrowLeft, ArrowRight, Lightbulb, CheckCircle2, XCircle, Loader2, Copy, Check, Star, Sparkles } from 'lucide-react';
+import { useSession, signIn } from 'next-auth/react';
+import { ArrowLeft, ArrowRight, Lightbulb, CheckCircle2, XCircle, Loader2, Copy, Check, Star, Sparkles, MessageSquare, Send, ChevronDown, ChevronUp } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 
 export default function ProblemClient({ 
   problem, 
@@ -26,8 +28,18 @@ export default function ProblemClient({
   const [result, setResult] = useState<{ correct: boolean } | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [copied, setCopied] = useState(false);
+  const { data: session } = useSession();
+
+  // New Comments State
+  const [comments, setComments] = useState<any[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [isPostingComment, setIsPostingComment] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
+  const [areCommentsLoaded, setAreCommentsLoaded] = useState(false);
+  const [showComments, setShowComments] = useState(false);
 
   useEffect(() => {
+    // Fetch problem status
     fetch(`/api/problems/${problem.id}/status`)
       .then(res => res.json())
       .then(data => {
@@ -38,6 +50,18 @@ export default function ProblemClient({
         setIsStatusLoading(false);
       })
       .catch(() => setIsStatusLoading(false));
+
+    // Fetch comments
+    fetch(`/api/problems/${problem.id}/comments`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.comments) setComments(data.comments);
+        setAreCommentsLoaded(true);
+      })
+      .catch(err => {
+        console.error(err);
+        setAreCommentsLoaded(true);
+      });
   }, [problem.id]);
 
   const loadImage = (src: string): Promise<HTMLImageElement | null> => {
@@ -137,6 +161,33 @@ export default function ProblemClient({
       console.error(e);
     } finally {
       setIsGeneratingHint(false);
+    }
+  };
+
+  const postComment = async () => {
+    if (!newComment.trim()) return;
+    setIsPostingComment(true);
+    setCommentError(null);
+    try {
+      const res = await fetch(`/api/problems/${problem.id}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: newComment })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setCommentError(data.error || 'Failed to post comment');
+        return;
+      }
+      if (data.comment) {
+        setComments([data.comment, ...comments]);
+        setNewComment('');
+      }
+    } catch (e) {
+      console.error(e);
+      setCommentError('An unexpected error occurred');
+    } finally {
+      setIsPostingComment(false);
     }
   };
 
@@ -359,6 +410,104 @@ export default function ProblemClient({
             )}
           </div>
         </div>
+
+        {/* Discussion Section */}
+        <div className="bg-gray-900/50 backdrop-blur-xl border border-gray-800 rounded-3xl p-8 shadow-2xl mt-8">
+          <button 
+            onClick={() => setShowComments(!showComments)}
+            className="w-full flex items-center justify-between group"
+          >
+            <h2 className="text-2xl font-bold flex items-center gap-2 group-hover:text-blue-400 transition-colors">
+              <MessageSquare className="w-6 h-6 text-blue-400" />
+              Community Discussion
+            </h2>
+            {showComments ? <ChevronUp className="w-6 h-6 text-gray-500" /> : <ChevronDown className="w-6 h-6 text-gray-500" />}
+          </button>
+          
+          {showComments && (
+            <div className="mt-8">
+              <div className="mb-6 bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
+                <h3 className="text-sm font-semibold text-blue-400 mb-2">Community Guidelines</h3>
+                <ul className="text-xs text-blue-200/70 space-y-1 list-disc list-inside">
+                  <li>Be respectful to others. Harassment and hate speech are strictly prohibited.</li>
+                  <li>Do not use profanity or inappropriate language.</li>
+                  <li>Comments may contain spoilers or full solutions! Read at your own risk.</li>
+                  <li>Keep discussions focused on the problem at hand.</li>
+                </ul>
+              </div>
+
+              <div className="mb-8">
+                {session ? (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex gap-4">
+                      <input
+                        type="text"
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        placeholder="Share your thoughts or alternative solutions..."
+                        className="flex-1 bg-gray-950 border border-gray-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-white placeholder-gray-600"
+                        onKeyDown={(e) => e.key === 'Enter' && postComment()}
+                      />
+                      <button
+                        onClick={postComment}
+                        disabled={isPostingComment || !newComment.trim()}
+                        className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl font-medium transition-all flex items-center gap-2"
+                      >
+                        {isPostingComment ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                        Post
+                      </button>
+                    </div>
+                    {commentError && (
+                      <p className="text-red-400 text-sm mt-1">{commentError}</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-gray-800/50 rounded-xl p-6 text-center border border-gray-700/50">
+                    <p className="text-gray-400 mb-4">You must be signed in to join the community discussion.</p>
+                    <button 
+                      onClick={() => signIn('google')} 
+                      className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all inline-flex items-center gap-2"
+                    >
+                      Sign In with Google
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-6">
+                {!areCommentsLoaded ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="w-6 h-6 text-gray-500 animate-spin" />
+                  </div>
+                ) : comments.length === 0 ? (
+                  <p className="text-gray-500 text-center py-8">No comments yet. Be the first to start the discussion!</p>
+                ) : (
+                  comments.map((comment) => (
+                    <div key={comment.id} className="bg-gray-800/30 rounded-2xl p-5 border border-gray-700/50">
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold overflow-hidden">
+                            {comment.user?.image ? (
+                              <img src={comment.user.image} alt="User" className="w-full h-full object-cover" />
+                            ) : (
+                              comment.user?.name?.charAt(0) || 'U'
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-200">{comment.user?.name || 'Anonymous User'}</p>
+                            <p className="text-xs text-gray-500">{formatDistanceToNow(new Date(comment.createdAt))} ago</p>
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">{comment.text}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   );
