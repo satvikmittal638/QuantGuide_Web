@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Target, CheckCircle, Star, Flame, Trophy, BarChart3, PieChart, Calendar } from 'lucide-react';
+import { Target, CheckCircle, Star, Flame, Trophy, BarChart3, PieChart, Calendar, ArrowUp, ArrowDown } from 'lucide-react';
 import { ActivityCalendar } from 'react-activity-calendar';
 
 interface Problem {
@@ -14,6 +14,7 @@ interface Problem {
   difficulty: string;
   source: string;
   createdAt: Date;
+  qNo?: number;
 }
 
 interface ProblemListProps {
@@ -34,8 +35,16 @@ export default function ProblemList({ problems }: ProblemListProps) {
   const [highestStreak, setHighestStreak] = useState(0);
   const [heatmapData, setHeatmapData] = useState<any[]>([]);
   const [isStatusLoaded, setIsStatusLoaded] = useState(false);
+  const [minQuestionNo, setMinQuestionNo] = useState('');
+  const [maxQuestionNo, setMaxQuestionNo] = useState('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const isFirstFilterChange = useRef(true);
   const pageSize = 20;
+
+  const problemsWithQNo = useMemo(() => {
+    return problems.map((p, i) => ({ ...p, qNo: i + 1 }));
+  }, [problems]);
 
   // Global keyboard shortcut for search focus
   useEffect(() => {
@@ -55,11 +64,23 @@ export default function ProblemList({ problems }: ProblemListProps) {
     setTopicFilter(localStorage.getItem('qg_topic') || 'All');
     setDifficultyFilter(localStorage.getItem('qg_difficulty') || 'All');
     setStatusFilter(localStorage.getItem('qg_status') || 'All');
+    setMinQuestionNo(localStorage.getItem('qg_min_q') || '');
+    setMaxQuestionNo(localStorage.getItem('qg_max_q') || '');
+    setSortOrder((localStorage.getItem('qg_sort') as 'asc' | 'desc') || 'asc');
     
     const page = localStorage.getItem('qg_page');
     if (page) setCurrentPage(parseInt(page));
     
     setIsMounted(true);
+
+    // Scroll restoration
+    const savedScrollY = sessionStorage.getItem('qg_scroll_y');
+    if (savedScrollY) {
+      setTimeout(() => {
+        window.scrollTo({ top: parseInt(savedScrollY), behavior: 'instant' });
+        sessionStorage.removeItem('qg_scroll_y'); // clear after restore
+      }, 50);
+    }
 
     // Fetch user status
     fetch('/api/user/status')
@@ -84,8 +105,11 @@ export default function ProblemList({ problems }: ProblemListProps) {
     localStorage.setItem('qg_topic', topicFilter);
     localStorage.setItem('qg_difficulty', difficultyFilter);
     localStorage.setItem('qg_status', statusFilter);
+    localStorage.setItem('qg_min_q', minQuestionNo);
+    localStorage.setItem('qg_max_q', maxQuestionNo);
+    localStorage.setItem('qg_sort', sortOrder);
     localStorage.setItem('qg_page', currentPage.toString());
-  }, [searchQuery, topicFilter, difficultyFilter, statusFilter, currentPage, isMounted]);
+  }, [searchQuery, topicFilter, difficultyFilter, statusFilter, minQuestionNo, maxQuestionNo, sortOrder, currentPage, isMounted]);
 
   const topics = useMemo(() => {
     const set = new Set(problems.map(p => p.topic.toLowerCase()));
@@ -98,7 +122,7 @@ export default function ProblemList({ problems }: ProblemListProps) {
   const savedSet = useMemo(() => new Set(savedIds), [savedIds]);
 
   const filteredProblems = useMemo(() => {
-    return problems.filter(p => {
+    let result = problemsWithQNo.filter(p => {
       const q = searchQuery.toLowerCase();
       const matchSearch = p.title.toLowerCase().includes(q) || 
                           (p.description && p.description.toLowerCase().includes(q));
@@ -113,9 +137,21 @@ export default function ProblemList({ problems }: ProblemListProps) {
                           (statusFilter === 'Unsolved' && !isSolved) ||
                           (statusFilter === 'Saved' && isSaved);
                           
-      return matchSearch && matchTopic && matchDifficulty && matchStatus;
+      const matchMin = minQuestionNo === '' || p.qNo! >= parseInt(minQuestionNo);
+      const matchMax = maxQuestionNo === '' || p.qNo! <= parseInt(maxQuestionNo);
+
+      return matchSearch && matchTopic && matchDifficulty && matchStatus && matchMin && matchMax;
     });
-  }, [problems, searchQuery, topicFilter, difficultyFilter, statusFilter, solvedSet, savedSet]);
+
+    result.sort((a, b) => {
+      if (sortOrder === 'desc') {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    });
+
+    return result;
+  }, [problemsWithQNo, searchQuery, topicFilter, difficultyFilter, statusFilter, solvedSet, savedSet, minQuestionNo, maxQuestionNo, sortOrder]);
 
   const totalPages = Math.ceil(filteredProblems.length / pageSize);
   const paginatedProblems = useMemo(() => {
@@ -123,12 +159,15 @@ export default function ProblemList({ problems }: ProblemListProps) {
     return filteredProblems.slice(start, start + pageSize);
   }, [filteredProblems, currentPage]);
 
-  // Reset to page 1 when filters change (only if mounted)
-  useMemo(() => {
-    if (isMounted) {
-      setCurrentPage(1);
+  // Reset to page 1 when filters change, but skip the initial mount load
+  useEffect(() => {
+    if (!isMounted) return;
+    if (isFirstFilterChange.current) {
+      isFirstFilterChange.current = false;
+      return;
     }
-  }, [searchQuery, topicFilter, difficultyFilter, statusFilter, isMounted]);
+    setCurrentPage(1);
+  }, [searchQuery, topicFilter, difficultyFilter, statusFilter, minQuestionNo, maxQuestionNo, sortOrder, isMounted]);
 
   const statuses = ['All', 'Unsolved', 'Solved', 'Saved'];
 
@@ -285,7 +324,7 @@ export default function ProblemList({ problems }: ProblemListProps) {
           Problem Bank
         </h2>
         
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
           <div className="relative">
             <input 
               ref={searchInputRef}
@@ -297,30 +336,51 @@ export default function ProblemList({ problems }: ProblemListProps) {
             />
           </div>
           
+          <input 
+            type="number"
+            placeholder="Min Q#"
+            value={minQuestionNo}
+            onChange={(e) => setMinQuestionNo(e.target.value)}
+            className="w-24 bg-gray-800 border border-gray-700 text-white text-sm rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+          />
+          <input 
+            type="number"
+            placeholder="Max Q#"
+            value={maxQuestionNo}
+            onChange={(e) => setMaxQuestionNo(e.target.value)}
+            className="w-24 bg-gray-800 border border-gray-700 text-white text-sm rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+          />
           <select 
             value={topicFilter} 
             onChange={(e) => setTopicFilter(e.target.value)}
-            className="bg-gray-900 border border-gray-700 text-sm rounded-lg px-3 py-2 text-gray-300 focus:outline-none focus:border-blue-500 capitalize"
+            className="bg-gray-800 border border-gray-700 text-white text-sm rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
           >
-            {topics.map(t => <option key={t} value={t}>{t}</option>)}
+            {topics.map(t => <option key={t} value={t}>{t === 'All' ? 'All Topics' : t}</option>)}
           </select>
           
           <select 
             value={difficultyFilter} 
             onChange={(e) => setDifficultyFilter(e.target.value)}
-            className="bg-gray-900 border border-gray-700 text-sm rounded-lg px-3 py-2 text-gray-300 focus:outline-none focus:border-blue-500 capitalize"
+            className="bg-gray-800 border border-gray-700 text-white text-sm rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
           >
-            {difficulties.map(d => <option key={d} value={d}>{d}</option>)}
+            {difficulties.map(d => <option key={d} value={d}>{d === 'All' ? 'All Difficulties' : d.charAt(0).toUpperCase() + d.slice(1)}</option>)}
           </select>
 
           <select 
             value={statusFilter} 
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-gray-900 border border-gray-700 text-sm rounded-lg px-3 py-2 text-gray-300 focus:outline-none focus:border-blue-500"
+            className="bg-gray-800 border border-gray-700 text-white text-sm rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
           >
             {statuses.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
 
+          <button
+            onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+            className="flex items-center justify-center bg-gray-800 border border-gray-700 text-white rounded-xl p-2.5 hover:bg-gray-700 transition-colors"
+            title={`Sort: ${sortOrder === 'asc' ? 'Ascending' : 'Descending'}`}
+          >
+            {sortOrder === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
+          </button>
         </div>
       </div>
       
@@ -356,19 +416,26 @@ export default function ProblemList({ problems }: ProblemListProps) {
                                    topic.includes('brainteaser') ? 'bg-[#ff8a33]/10 text-[#ff8a33] border-[#ff8a33]/20' :
                                    'bg-blue-500/10 text-blue-400 border-blue-500/20';
                 
-                const globalIndex = (currentPage - 1) * pageSize + index + 1;
-                
                 return (
                   <tr 
                     key={problem.id} 
-                    onClick={() => router.push(`/problems/${problem.id}`)}
+                    id={`problem-${problem.id}`}
+                    onClick={() => {
+                      sessionStorage.setItem('qg_scroll_y', window.scrollY.toString());
+                      router.push(`/problems/${problem.id}`);
+                    }}
                     className="hover:bg-gray-800/60 transition-all duration-200 group cursor-pointer"
                   >
                     <td className="py-6 px-8 text-gray-500 text-base text-center font-medium">
-                      {globalIndex}
+                      {problem.qNo}
                     </td>
                     <td className="py-6 px-8">
-                      <Link href={`/problems/${problem.id}`} className="flex items-center gap-3" aria-label={`Go to ${problem.title}`}>
+                      <Link 
+                        href={`/problems/${problem.id}`} 
+                        onClick={() => sessionStorage.setItem('qg_scroll_y', window.scrollY.toString())}
+                        className="flex items-center gap-3" 
+                        aria-label={`Go to ${problem.title}`}
+                      >
                         <span className="text-lg font-bold text-gray-100 group-hover:text-blue-400 transition-colors">
                           {problem.title}
                         </span>

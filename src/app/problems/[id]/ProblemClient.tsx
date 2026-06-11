@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import NextImage from 'next/image';
 import { useSession, signIn } from 'next-auth/react';
 import { ArrowLeft, ArrowRight, Lightbulb, CheckCircle2, XCircle, Loader2, Copy, Check, Star, Sparkles, MessageSquare, Send, ChevronDown, ChevronUp } from 'lucide-react';
@@ -37,6 +38,7 @@ export default function ProblemClient({
   const [commentError, setCommentError] = useState<string | null>(null);
   const [areCommentsLoaded, setAreCommentsLoaded] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     // Fetch problem status
@@ -231,13 +233,19 @@ export default function ProblemClient({
     <div className="min-h-screen bg-gray-950 text-white p-6 font-sans">
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex justify-between items-center mb-8 gap-4">
-          <Link 
-            href="/" 
+          <button 
+            onClick={() => {
+              if (window.history.length > 2) {
+                router.back();
+              } else {
+                router.push('/');
+              }
+            }}
             className="inline-flex items-center text-gray-400 hover:text-white transition-colors group px-2 py-1 -ml-2 rounded"
           >
             <ArrowLeft className="w-5 h-5 mr-2 transform group-hover:-translate-x-1 transition-transform" />
             Back to Dashboard
-          </Link>
+          </button>
           
           <div className="flex items-center gap-3">
             {prevId && (
