@@ -26,7 +26,7 @@ export default function ProblemClient({
   const [aiHint, setAiHint] = useState<string | null>(null);
   const [isGeneratingHint, setIsGeneratingHint] = useState(false);
   const [checking, setChecking] = useState(false);
-  const [result, setResult] = useState<{ correct: boolean } | null>(null);
+  const [result, setResult] = useState<{ correct: boolean; message?: string } | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [copied, setCopied] = useState(false);
   const { data: session } = useSession();
@@ -143,7 +143,10 @@ export default function ProblemClient({
         alert(data.error);
         return;
       }
-      setResult({ correct: data.correct });
+      setResult({ 
+        correct: data.correct, 
+        message: data.correct ? 'Correct! Your streak has been updated.' : 'Incorrect. Try again!' 
+      });
       if (data.correct) setIsCorrect(true);
     } catch (e) {
       console.error(e);
@@ -194,36 +197,58 @@ export default function ProblemClient({
   };
 
   const toggleSave = async () => {
+    if (!session) {
+      alert("You must be signed in to save problems.");
+      return;
+    }
+
+    const previousState = isSaved;
+    setIsSaved(!isSaved);
+    
     try {
       setSaving(true);
       const res = await fetch(`/api/problems/${problem.id}/save`, {
         method: 'POST',
       });
-      if (res.ok) {
-        const data = await res.json();
-        setIsSaved(data.saved);
+      if (!res.ok) {
+        setIsSaved(previousState);
       }
     } catch (e) {
       console.error(e);
+      setIsSaved(previousState);
     } finally {
       setSaving(false);
     }
   };
 
   const handleToggleSolved = async () => {
+    if (!session) {
+      alert("You must be signed in to mark problems as solved.");
+      return;
+    }
+
+    const previousState = isCorrect;
+    const newState = !isCorrect;
+    
+    setIsCorrect(newState);
+    if (newState) setResult({ correct: true, message: 'Marked as Solved' });
+    else setResult(null);
+    
     try {
       setTogglingSolved(true);
       const res = await fetch(`/api/problems/${problem.id}/toggle-solved`, {
         method: 'POST',
       });
-      if (res.ok) {
-        const data = await res.json();
-        setIsCorrect(data.isSolved);
-        if (data.isSolved) setResult({ correct: true });
-        else setResult(null); // Reset result if unmarked
+      if (!res.ok) {
+        setIsCorrect(previousState);
+        if (previousState) setResult({ correct: true, message: 'Marked as Solved' });
+        else setResult(null);
       }
     } catch (e) {
       console.error(e);
+      setIsCorrect(previousState);
+      if (previousState) setResult({ correct: true, message: 'Marked as Solved' });
+      else setResult(null);
     } finally {
       setTogglingSolved(false);
     }
@@ -359,7 +384,7 @@ export default function ProblemClient({
               <div className={`mt-4 p-4 rounded-xl flex items-center gap-3 ${result.correct ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border border-red-500/20 text-red-400'}`}>
                 {result.correct ? <CheckCircle2 className="w-6 h-6" /> : <XCircle className="w-6 h-6" />}
                 <span className="font-medium">
-                  {result.correct ? 'Correct! Your streak has been updated.' : 'Incorrect. Try again!'}
+                  {result.message}
                 </span>
               </div>
             )}
