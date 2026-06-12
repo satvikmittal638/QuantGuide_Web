@@ -71,6 +71,8 @@ model Problem {
   description  String
   topic        String
   difficulty   String
+  level        Int?         // QuantProf difficulty out of 10
+  companies    String?      // Comma-separated company names
   source       String       @default("Quant Guide PDF")
   solution     String       // Store string, but parse numeric later, or store as numeric if possible. User said "ans should be numeric only" so solution can be just string representation of the number.
   fullSolution String?

@@ -15,6 +15,8 @@ interface Problem {
   source: string;
   createdAt: Date;
   qNo?: number;
+  level?: number | null;
+  companies?: string | null;
 }
 
 interface ProblemListProps {
@@ -28,6 +30,9 @@ export default function ProblemList({ problems }: ProblemListProps) {
   const [topicFilter, setTopicFilter] = useState('All');
   const [difficultyFilter, setDifficultyFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [sourceFilter, setSourceFilter] = useState('All');
+  const [levelFilter, setLevelFilter] = useState('All');
+  const [companyFilter, setCompanyFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
   const [solvedIds, setSolvedIds] = useState<string[]>([]);
   const [savedIds, setSavedIds] = useState<string[]>([]);
@@ -64,6 +69,9 @@ export default function ProblemList({ problems }: ProblemListProps) {
     setTopicFilter(localStorage.getItem('qg_topic') || 'All');
     setDifficultyFilter(localStorage.getItem('qg_difficulty') || 'All');
     setStatusFilter(localStorage.getItem('qg_status') || 'All');
+    setSourceFilter(localStorage.getItem('qg_source') || 'All');
+    setLevelFilter(localStorage.getItem('qg_level') || 'All');
+    setCompanyFilter(localStorage.getItem('qg_company') || 'All');
     setMinQuestionNo(localStorage.getItem('qg_min_q') || '');
     setMaxQuestionNo(localStorage.getItem('qg_max_q') || '');
     setSortOrder((localStorage.getItem('qg_sort') as 'asc' | 'desc') || 'asc');
@@ -105,11 +113,14 @@ export default function ProblemList({ problems }: ProblemListProps) {
     localStorage.setItem('qg_topic', topicFilter);
     localStorage.setItem('qg_difficulty', difficultyFilter);
     localStorage.setItem('qg_status', statusFilter);
+    localStorage.setItem('qg_source', sourceFilter);
+    localStorage.setItem('qg_level', levelFilter);
+    localStorage.setItem('qg_company', companyFilter);
     localStorage.setItem('qg_min_q', minQuestionNo);
     localStorage.setItem('qg_max_q', maxQuestionNo);
     localStorage.setItem('qg_sort', sortOrder);
     localStorage.setItem('qg_page', currentPage.toString());
-  }, [searchQuery, topicFilter, difficultyFilter, statusFilter, minQuestionNo, maxQuestionNo, sortOrder, currentPage, isMounted]);
+  }, [searchQuery, topicFilter, difficultyFilter, statusFilter, sourceFilter, levelFilter, companyFilter, minQuestionNo, maxQuestionNo, sortOrder, currentPage, isMounted]);
 
   const topics = useMemo(() => {
     const set = new Set(problems.map(p => p.topic.toLowerCase()));
@@ -117,6 +128,26 @@ export default function ProblemList({ problems }: ProblemListProps) {
   }, [problems]);
 
   const difficulties = ['All', 'easy', 'medium', 'hard'];
+
+  const sources = useMemo(() => {
+    const set = new Set(problems.map(p => p.source));
+    return ['All', ...Array.from(set)];
+  }, [problems]);
+
+  const levels = useMemo(() => {
+    const set = new Set(problems.filter(p => p.level !== null && p.level !== undefined).map(p => p.level!.toString()));
+    return ['All', ...Array.from(set).sort((a,b) => parseInt(a) - parseInt(b))];
+  }, [problems]);
+
+  const companies = useMemo(() => {
+    const set = new Set<string>();
+    problems.forEach(p => {
+      if (p.companies) {
+        p.companies.split(',').forEach(c => set.add(c.trim()));
+      }
+    });
+    return ['All', ...Array.from(set).sort()];
+  }, [problems]);
 
   const solvedSet = useMemo(() => new Set(solvedIds), [solvedIds]);
   const savedSet = useMemo(() => new Set(savedIds), [savedIds]);
@@ -137,10 +168,14 @@ export default function ProblemList({ problems }: ProblemListProps) {
                           (statusFilter === 'Unsolved' && !isSolved) ||
                           (statusFilter === 'Saved' && isSaved);
                           
+      const matchSource = sourceFilter === 'All' || p.source === sourceFilter;
+      const matchLevel = levelFilter === 'All' || (p.level && p.level.toString() === levelFilter);
+      const matchCompany = companyFilter === 'All' || (p.companies && p.companies.toLowerCase().includes(companyFilter.toLowerCase()));
+
       const matchMin = minQuestionNo === '' || p.qNo! >= parseInt(minQuestionNo);
       const matchMax = maxQuestionNo === '' || p.qNo! <= parseInt(maxQuestionNo);
 
-      return matchSearch && matchTopic && matchDifficulty && matchStatus && matchMin && matchMax;
+      return matchSearch && matchTopic && matchDifficulty && matchStatus && matchSource && matchLevel && matchCompany && matchMin && matchMax;
     });
 
     result.sort((a, b) => {
@@ -151,7 +186,7 @@ export default function ProblemList({ problems }: ProblemListProps) {
     });
 
     return result;
-  }, [problemsWithQNo, searchQuery, topicFilter, difficultyFilter, statusFilter, solvedSet, savedSet, minQuestionNo, maxQuestionNo, sortOrder]);
+  }, [problemsWithQNo, searchQuery, topicFilter, difficultyFilter, statusFilter, sourceFilter, levelFilter, companyFilter, solvedSet, savedSet, minQuestionNo, maxQuestionNo, sortOrder]);
 
   const totalPages = Math.ceil(filteredProblems.length / pageSize);
   const paginatedProblems = useMemo(() => {
@@ -167,7 +202,7 @@ export default function ProblemList({ problems }: ProblemListProps) {
       return;
     }
     setCurrentPage(1);
-  }, [searchQuery, topicFilter, difficultyFilter, statusFilter, minQuestionNo, maxQuestionNo, sortOrder, isMounted]);
+  }, [searchQuery, topicFilter, difficultyFilter, statusFilter, sourceFilter, levelFilter, companyFilter, minQuestionNo, maxQuestionNo, sortOrder, isMounted]);
 
   const statuses = ['All', 'Unsolved', 'Solved', 'Saved'];
 
@@ -350,6 +385,32 @@ export default function ProblemList({ problems }: ProblemListProps) {
             onChange={(e) => setMaxQuestionNo(e.target.value)}
             className="w-24 bg-gray-800 border border-gray-700 text-white text-sm rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
           />
+
+          <select 
+            value={sourceFilter} 
+            onChange={(e) => setSourceFilter(e.target.value)}
+            className="bg-gray-800 border border-gray-700 text-white text-sm rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
+          >
+            {sources.map(s => <option key={s} value={s}>{s === 'All' ? 'All Sources' : s}</option>)}
+          </select>
+
+          {sourceFilter === 'QuantProf' && (
+            <select 
+              value={levelFilter} 
+              onChange={(e) => setLevelFilter(e.target.value)}
+              className="bg-gray-800 border border-gray-700 text-white text-sm rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
+            >
+              {levels.map(l => <option key={l} value={l}>{l === 'All' ? 'All Levels' : `Level ${l}`}</option>)}
+            </select>
+          )}
+
+          <select 
+            value={companyFilter} 
+            onChange={(e) => setCompanyFilter(e.target.value)}
+            className="bg-gray-800 border border-gray-700 text-white text-sm rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer max-w-[150px] truncate"
+          >
+            {companies.map(c => <option key={c} value={c}>{c === 'All' ? 'All Companies' : c}</option>)}
+          </select>
           <select 
             value={topicFilter} 
             onChange={(e) => setTopicFilter(e.target.value)}

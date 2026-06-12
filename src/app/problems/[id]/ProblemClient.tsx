@@ -22,11 +22,9 @@ export default function ProblemClient({
   const [saving, setSaving] = useState(false);
   const [togglingSolved, setTogglingSolved] = useState(false);
   const [answer, setAnswer] = useState('');
-  const [hint, setHint] = useState<string | null>(null);
-  const [aiHint, setAiHint] = useState<string | null>(null);
-  const [isGeneratingHint, setIsGeneratingHint] = useState(false);
+  const [hint, setHint] = useState<'show_hint' | 'show_solution' | null>(null);
   const [checking, setChecking] = useState(false);
-  const [result, setResult] = useState<{ correct: boolean; message?: string } | null>(null);
+  const [result, setResult] = useState<{correct: boolean; message: string} | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [copied, setCopied] = useState(false);
   const { data: session } = useSession();
@@ -155,20 +153,6 @@ export default function ProblemClient({
     }
   };
 
-  const generateHint = async () => {
-    if (aiHint) return;
-    setIsGeneratingHint(true);
-    try {
-      const res = await fetch(`/api/problems/${problem.id}/hint`, { method: 'POST' });
-      const data = await res.json();
-      if (data.hint) setAiHint(data.hint);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsGeneratingHint(false);
-    }
-  };
-
   const postComment = async () => {
     if (!newComment.trim()) return;
     setIsPostingComment(true);
@@ -260,11 +244,7 @@ export default function ProblemClient({
         <div className="flex justify-between items-center mb-8 gap-4">
           <button 
             onClick={() => {
-              if (window.history.length > 2) {
-                router.back();
-              } else {
-                router.push('/');
-              }
+              router.push('/');
             }}
             className="inline-flex items-center text-gray-400 hover:text-white transition-colors group px-2 py-1 -ml-2 rounded"
           >
@@ -305,7 +285,22 @@ export default function ProblemClient({
                 {problem.source}
               </span>
             )}
+            {problem.level !== null && problem.level !== undefined && (
+              <span className="px-3 py-1 bg-orange-500/10 text-orange-400 text-xs font-medium rounded-full border border-orange-500/20">
+                Level {problem.level}/10
+              </span>
+            )}
           </div>
+          
+          {problem.companies && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {problem.companies.split(',').map((company: string) => (
+                <span key={company} className="px-2 py-1 bg-gray-800 text-gray-300 text-xs font-medium rounded border border-gray-700">
+                  {company.trim()}
+                </span>
+              ))}
+            </div>
+          )}
           
           <div className="flex items-center justify-between mb-8">
             <h1 className="text-4xl font-extrabold text-white tracking-tight">{problem.title}</h1>
@@ -400,41 +395,40 @@ export default function ProblemClient({
                 <span>{hint === 'show_solution' ? 'Hide Full Solution' : 'View Full Solution'}</span>
               </button>
 
-              <div className="flex items-center">
+              {problem.source === 'QuantProf' && (
                 <button
-                  onClick={generateHint}
-                  disabled={isGeneratingHint || !!aiHint}
-                  className="flex items-center gap-2 text-purple-400 hover:text-purple-300 transition-colors disabled:opacity-50"
+                  onClick={() => setHint(hint === 'show_hint' ? null : 'show_hint')}
+                  className="flex items-center gap-2 text-purple-400 hover:text-purple-300 transition-colors"
                 >
-                  {isGeneratingHint ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                  <span>{isGeneratingHint ? 'Generating AI Hint...' : 'Generate Hint (AI)'}</span>
+                  <Sparkles className="w-4 h-4" />
+                  <span>{hint === 'show_hint' ? 'Hide Hint' : 'View Hint'}</span>
                 </button>
-                <span className="text-xs text-gray-500 italic ml-2">
-                  (Subject to user demand volume)
-                </span>
-              </div>
+              )}
             </div>
 
-            {aiHint && (
-              <div className="mt-4 p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl">
-                <p className="text-sm text-purple-200 leading-relaxed">
-                  <span className="font-semibold text-purple-400 flex items-center gap-2 mb-2">
-                    <Sparkles className="w-4 h-4" /> AI Hint:
-                  </span>
-                  {aiHint}
-                </p>
+            {hint === 'show_hint' && problem.source === 'QuantProf' && (
+              <div className="mt-6 flex flex-col justify-start">
+                <NextImage 
+                  src={`/images/hints/${encodeURIComponent(problem.title.replace(/ /g, '_').replace(/\//g, '').replace(/:/g, ''))}.png`}
+                  alt="Hint"
+                  width={0}
+                  height={0}
+                  sizes="100vw"
+                  style={{ width: '100%', height: 'auto' }}
+                  className="max-w-full h-auto invert hue-rotate-180 mix-blend-screen opacity-90"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
               </div>
             )}
             
             {hint === 'show_solution' && (
-              <div className="mt-6 flex justify-start">
+              <div className="mt-6 flex flex-col justify-start">
                 <NextImage 
                   src={`/images/solutions/${encodeURIComponent(problem.title.replace(/ /g, '_').replace(/\//g, '').replace(/:/g, ''))}.png`}
                   alt="Solution"
                   width={0}
                   height={0}
                   sizes="100vw"
-                  priority={true}
                   style={{ width: '100%', height: 'auto' }}
                   className="max-w-full h-auto invert hue-rotate-180 mix-blend-screen opacity-90"
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}

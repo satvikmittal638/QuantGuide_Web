@@ -14,6 +14,8 @@ const getCachedProblems = unstable_cache(
         topic: true,
         difficulty: true,
         source: true,
+        level: true,
+        companies: true,
         createdAt: true,
       },
       orderBy: { createdAt: 'asc' }
