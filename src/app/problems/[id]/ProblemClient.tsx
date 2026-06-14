@@ -374,8 +374,8 @@ export default function ProblemClient({
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-6 font-sans">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gray-950 text-white p-3 sm:p-6 font-sans">
+      <div className="w-full max-w-7xl mx-auto space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
           <button 
             onClick={() => {
@@ -535,18 +535,20 @@ export default function ProblemClient({
             </span>
           </div>
 
-          <div className="mb-12 flex justify-start">
-            <NextImage 
-              src={`/images/problems/${encodeURIComponent(problem.title.replace(/ /g, '_').replace(/\//g, '').replace(/:/g, ''))}.png`}
-              alt={problem.title}
-              width={0}
-              height={0}
-              sizes="100vw"
-              priority={true}
-              style={{ width: '100%', height: 'auto' }}
-              className="max-w-full h-auto invert hue-rotate-180 mix-blend-screen opacity-90"
-              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-            />
+          <div className="mb-12 w-full overflow-x-auto pb-4 custom-scrollbar">
+            <div className="min-w-[800px] lg:min-w-full flex justify-start">
+              <NextImage 
+                src={`/images/problems/${encodeURIComponent(problem.title.replace(/ /g, '_').replace(/\//g, '').replace(/:/g, ''))}.png`}
+                alt={problem.title}
+                width={0}
+                height={0}
+                sizes="100vw"
+                priority={true}
+                style={{ width: '100%', height: 'auto' }}
+                className="max-w-full h-auto invert hue-rotate-180 mix-blend-screen opacity-90"
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              />
+            </div>
           </div>
           
           <div className="border-t border-gray-800 pt-8 mt-8">
@@ -610,51 +612,55 @@ export default function ProblemClient({
             </div>
 
             {problem.source === 'QuantProf' && (showHint1 || showHint2) && (
-              <div className="mt-6 flex flex-col gap-4">
-                <img 
-                  src={`/images/hints/${encodeURIComponent(problem.title.replace(/ /g, '_').replace(/\//g, '').replace(/:/g, ''))}.png`}
-                  className="absolute opacity-0 pointer-events-none w-0 h-0"
-                  onLoad={(e) => {
-                    const aspect = e.currentTarget.naturalWidth / e.currentTarget.naturalHeight;
-                    if (aspect > 0 && isFinite(aspect)) setHintAspectRatio(aspect);
-                  }}
-                  alt="Hidden loader"
-                />
+              <div className="mt-6 w-full overflow-x-auto pb-4 custom-scrollbar">
+                <div className="min-w-[800px] lg:min-w-full flex flex-col gap-4">
+                  <img 
+                    src={`/images/hints/${encodeURIComponent(problem.title.replace(/ /g, '_').replace(/\//g, '').replace(/:/g, ''))}.png`}
+                    className="absolute opacity-0 pointer-events-none w-0 h-0"
+                    onLoad={(e) => {
+                      const aspect = e.currentTarget.naturalWidth / e.currentTarget.naturalHeight;
+                      if (aspect > 0 && isFinite(aspect)) setHintAspectRatio(aspect);
+                    }}
+                    alt="Hidden loader"
+                  />
 
-                {showHint1 && (
-                  <div className="relative w-full overflow-hidden bg-gray-900/30 rounded-xl" style={{ paddingBottom: `${(1 / hintAspectRatio) * 50}%` }}>
-                    <img 
-                      src={`/images/hints/${encodeURIComponent(problem.title.replace(/ /g, '_').replace(/\//g, '').replace(/:/g, ''))}.png`}
-                      alt="Hint 1"
-                      className="absolute top-0 left-0 w-full h-[200%] max-w-none invert hue-rotate-180 mix-blend-screen opacity-90"
-                    />
-                  </div>
-                )}
+                  {showHint1 && (
+                    <div className="relative w-full overflow-hidden bg-gray-900/30 rounded-xl" style={{ paddingBottom: `${(1 / hintAspectRatio) * 50}%` }}>
+                      <img 
+                        src={`/images/hints/${encodeURIComponent(problem.title.replace(/ /g, '_').replace(/\//g, '').replace(/:/g, ''))}.png`}
+                        alt="Hint 1"
+                        className="absolute top-0 left-0 w-full h-[200%] max-w-none invert hue-rotate-180 mix-blend-screen opacity-90"
+                      />
+                    </div>
+                  )}
 
-                {showHint2 && (
-                  <div className="relative w-full overflow-hidden bg-gray-900/30 rounded-xl" style={{ paddingBottom: `${(1 / hintAspectRatio) * 50}%` }}>
-                    <img 
-                      src={`/images/hints/${encodeURIComponent(problem.title.replace(/ /g, '_').replace(/\//g, '').replace(/:/g, ''))}.png`}
-                      alt="Hint 2"
-                      className="absolute bottom-0 left-0 w-full h-[200%] max-w-none invert hue-rotate-180 mix-blend-screen opacity-90"
-                    />
-                  </div>
-                )}
+                  {showHint2 && (
+                    <div className="relative w-full overflow-hidden bg-gray-900/30 rounded-xl" style={{ paddingBottom: `${(1 / hintAspectRatio) * 50}%` }}>
+                      <img 
+                        src={`/images/hints/${encodeURIComponent(problem.title.replace(/ /g, '_').replace(/\//g, '').replace(/:/g, ''))}.png`}
+                        alt="Hint 2"
+                        className="absolute bottom-0 left-0 w-full h-[200%] max-w-none invert hue-rotate-180 mix-blend-screen opacity-90"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             )}
             
             {showSolution && (
-              <div className="mt-6 flex flex-col justify-start">
-                <NextImage 
-                  src={`/images/solutions/${encodeURIComponent(problem.title.replace(/ /g, '_').replace(/\//g, '').replace(/:/g, ''))}.png`}
-                  alt="Solution"
-                  width={0}
-                  height={0}
-                  sizes="100vw"
-                  style={{ width: '100%', height: 'auto' }}
-                  className="max-w-full h-auto invert hue-rotate-180 mix-blend-screen opacity-90"
-                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                />
+              <div className="mt-6 w-full overflow-x-auto pb-4 custom-scrollbar">
+                <div className="min-w-[800px] lg:min-w-full flex flex-col justify-start">
+                  <NextImage 
+                    src={`/images/solutions/${encodeURIComponent(problem.title.replace(/ /g, '_').replace(/\//g, '').replace(/:/g, ''))}.png`}
+                    alt="Solution"
+                    width={0}
+                    height={0}
+                    sizes="100vw"
+                    style={{ width: '100%', height: 'auto' }}
+                    className="max-w-full h-auto invert hue-rotate-180 mix-blend-screen opacity-90"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                </div>
               </div>
             )}
           </div>
