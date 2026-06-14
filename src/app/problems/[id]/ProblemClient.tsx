@@ -376,7 +376,7 @@ export default function ProblemClient({
   return (
     <div className="min-h-screen bg-gray-950 text-white p-6 font-sans">
       <div className="max-w-4xl mx-auto space-y-6">
-        <div className="flex justify-between items-center mb-8 gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
           <button 
             onClick={() => {
               router.push('/');
@@ -387,11 +387,11 @@ export default function ProblemClient({
             Back to Dashboard
           </button>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
             {prevId && (
               <Link 
                 href={`/problems/${prevId}`}
-                className="inline-flex items-center px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg transition-colors text-sm font-medium"
+                className="inline-flex items-center justify-center flex-1 sm:flex-none px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg transition-colors text-sm font-medium"
               >
                 <ArrowLeft className="w-4 h-4 mr-1.5" /> Prev
               </Link>
@@ -399,7 +399,7 @@ export default function ProblemClient({
             {nextId && (
               <Link 
                 href={`/problems/${nextId}`}
-                className="inline-flex items-center px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg transition-colors text-sm font-medium"
+                className="inline-flex items-center justify-center flex-1 sm:flex-none px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg transition-colors text-sm font-medium"
               >
                 Next <ArrowRight className="w-4 h-4 ml-1.5" />
               </Link>
@@ -407,8 +407,8 @@ export default function ProblemClient({
           </div>
         </div>
         
-        <div className="bg-gray-900/50 backdrop-blur-xl border border-gray-800 rounded-3xl p-8 shadow-2xl">
-          <div className="flex gap-3 mb-4">
+        <div className="bg-gray-900/50 backdrop-blur-xl border border-gray-800 rounded-3xl p-6 sm:p-8 shadow-2xl">
+          <div className="flex flex-wrap gap-3 mb-4">
             <span className="px-3 py-1 bg-blue-500/10 text-blue-400 text-xs font-medium rounded-full border border-blue-500/20">
               {problem.topic}
             </span>
@@ -438,7 +438,7 @@ export default function ProblemClient({
           )}
 
           {/* Timer Section */}
-          <div className="mb-6 flex items-center justify-between bg-gray-800/30 p-4 rounded-2xl border border-gray-700/50">
+          <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-gray-800/30 p-4 rounded-2xl border border-gray-700/50">
             <div className="flex items-center gap-3">
               <Timer className="w-5 h-5 text-blue-400" />
               <span className="font-medium text-gray-300">Timed Practice Mode</span>
@@ -474,9 +474,9 @@ export default function ProblemClient({
             )}
           </div>
           
-          <div className="flex items-center justify-between mb-8">
-            <h1 className="text-4xl font-extrabold text-white tracking-tight">{problem.title}</h1>
-            <div className="flex gap-3">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">{problem.title}</h1>
+            <div className="flex flex-wrap gap-3 w-full md:w-auto">
               <button
                 onClick={handleToggleSolved}
                 disabled={togglingSolved || isStatusLoading}
@@ -509,7 +509,8 @@ export default function ProblemClient({
                 title="Copy Question & Solution Text"
               >
                 {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                <span className="text-sm font-medium">{copied ? 'Copied!' : 'Copy for AI'}</span>
+                <span className="text-sm font-medium hidden sm:inline">{copied ? 'Copied!' : 'Copy for AI'}</span>
+                <span className="text-sm font-medium sm:hidden">{copied ? 'Copied!' : 'Copy'}</span>
               </button>
             </div>
           </div>
@@ -550,19 +551,19 @@ export default function ProblemClient({
           
           <div className="border-t border-gray-800 pt-8 mt-8">
             <h3 className="text-lg font-medium text-gray-200 mb-4">Your Answer (Numeric or Fraction)</h3>
-            <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row gap-4">
               <input
                 type="text"
                 value={answer}
                 onChange={(e) => setAnswer(e.target.value)}
                 placeholder="e.g. 42 or 1/2"
-                className="flex-1 bg-gray-950 border border-gray-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-white placeholder-gray-600"
+                className="flex-1 w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-white placeholder-gray-600"
                 onKeyDown={(e) => e.key === 'Enter' && checkAnswer()}
               />
               <button
                 onClick={checkAnswer}
                 disabled={checking || !answer}
-                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold py-3 px-8 rounded-xl transition-all shadow-lg"
+                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 w-full sm:w-auto text-white font-semibold py-3 px-8 rounded-xl transition-all shadow-lg"
               >
                 {checking ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Submit'}
               </button>
@@ -685,12 +686,12 @@ export default function ProblemClient({
         </div>
 
         {/* Discussion Section */}
-        <div className="bg-gray-900/50 backdrop-blur-xl border border-gray-800 rounded-3xl p-8 shadow-2xl mt-8">
+        <div className="bg-gray-900/50 backdrop-blur-xl border border-gray-800 rounded-3xl p-6 sm:p-8 shadow-2xl mt-8">
           <button 
             onClick={() => setShowComments(!showComments)}
             className="w-full flex items-center justify-between group"
           >
-            <h2 className="text-2xl font-bold flex items-center gap-2 group-hover:text-blue-400 transition-colors">
+            <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2 group-hover:text-blue-400 transition-colors text-left">
               <MessageSquare className="w-6 h-6 text-blue-400" />
               Community Discussion
             </h2>
@@ -712,19 +713,19 @@ export default function ProblemClient({
               <div className="mb-8">
                 {session ? (
                   <div className="flex flex-col gap-2">
-                    <div className="flex gap-4">
+                    <div className="flex flex-col sm:flex-row gap-4">
                       <input
                         type="text"
                         value={newComment}
                         onChange={(e) => setNewComment(e.target.value)}
                         placeholder="Share your thoughts or alternative solutions..."
-                        className="flex-1 bg-gray-950 border border-gray-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-white placeholder-gray-600"
+                        className="flex-1 w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-white placeholder-gray-600"
                         onKeyDown={(e) => e.key === 'Enter' && postComment()}
                       />
                       <button
                         onClick={postComment}
                         disabled={isPostingComment || !newComment.trim()}
-                        className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl font-medium transition-all flex items-center gap-2"
+                        className="w-full sm:w-auto justify-center px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl font-medium transition-all flex items-center gap-2"
                       >
                         {isPostingComment ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                         Post
