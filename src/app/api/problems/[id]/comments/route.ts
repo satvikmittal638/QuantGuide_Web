@@ -12,14 +12,14 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
       orderBy: { createdAt: 'desc' },
       include: {
         user: {
-          select: { name: true, image: true, email: true }
+          select: { name: true, image: true }
         }
       }
     });
 
     return NextResponse.json({ comments });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -59,13 +59,13 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
       },
       include: {
         user: {
-          select: { name: true, image: true, email: true }
+          select: { name: true, image: true }
         }
       }
     });
 
     return NextResponse.json({ comment });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

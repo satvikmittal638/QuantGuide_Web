@@ -12,7 +12,7 @@
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",
     "@google/genai": "^2.7.0",
-    "@prisma/client": "^6.0.0",
+    "@prisma/client": "^6.19.3",
     "date-fns": "^4.4.0",
     "katex": "^0.17.0",
     "lucide-react": "^1.17.0",
@@ -35,7 +35,7 @@
     "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
-    "prisma": "^6.0.0",
+    "prisma": "^6.19.3",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

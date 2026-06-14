@@ -4,48 +4,69 @@ import { authOptions } from '@/lib/auth';
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  
-  if (!session?.user?.id) {
-    return NextResponse.json({ solvedIds: [], savedIds: [] });
-  }
-
-  const user = await prisma.user.findUnique({ 
-    where: { id: session.user.id },
-    include: { 
-      submissions: true,
-      savedProblems: true
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.id) {
+      return NextResponse.json({ solvedIds: [], savedIds: [] });
     }
-  });
 
-  if (!user) {
-    return NextResponse.json({ solvedIds: [], savedIds: [] });
-  }
+    const userId = session.user.id;
 
-  const solvedIds = user.submissions.filter(s => s.isCorrect).map(s => s.problemId);
-  const savedIds = user.savedProblems.map(s => s.problemId);
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { currentStreak: true, highestStreak: true }
+    });
 
-  // Calculate heatmap data (YYYY-MM-DD format)
-  const heatmapDataMap: Record<string, number> = {};
-  user.submissions.forEach(sub => {
-    if (sub.isCorrect) {
-      // Get date string in YYYY-MM-DD format
+    if (!user) {
+      return NextResponse.json({ solvedIds: [], savedIds: [] });
+    }
+
+    const [solvedSubs, heatmapSubs, savedProbs] = await Promise.all([
+      prisma.submission.findMany({ 
+        where: { userId, isCorrect: true }, 
+        select: { problemId: true }, 
+        distinct: ['problemId'] 
+      }),
+      prisma.submission.findMany({ 
+        where: { 
+          userId, 
+          isCorrect: true,
+          submittedAt: { gte: new Date(Date.now() - 365*24*60*60*1000) }
+        }, 
+        select: { submittedAt: true } 
+      }),
+      prisma.savedProblem.findMany({ 
+        where: { userId }, 
+        select: { problemId: true } 
+      })
+    ]);
+
+    const solvedIds = [...new Set(solvedSubs.map(s => s.problemId))];
+    const savedIds = savedProbs.map(s => s.problemId);
+
+    // Calculate heatmap data (YYYY-MM-DD format)
+    const heatmapDataMap: Record<string, number> = {};
+    heatmapSubs.forEach(sub => {
       const dateStr = sub.submittedAt.toISOString().split('T')[0];
       heatmapDataMap[dateStr] = (heatmapDataMap[dateStr] || 0) + 1;
-    }
-  });
+    });
 
-  const heatmapData = Object.keys(heatmapDataMap).map(date => ({
-    date,
-    count: heatmapDataMap[date],
-    level: Math.min(4, Math.ceil(heatmapDataMap[date] / 2)) // simple level calculation (max level 4)
-  }));
+    const heatmapData = Object.keys(heatmapDataMap).map(date => ({
+      date,
+      count: heatmapDataMap[date],
+      level: Math.min(4, Math.ceil(heatmapDataMap[date] / 2)) // simple level calculation (max level 4)
+    }));
 
-  return NextResponse.json({ 
-    solvedIds,
-    savedIds,
-    currentStreak: user.currentStreak,
-    highestStreak: user.highestStreak,
-    heatmapData
-  });
+    return NextResponse.json({ 
+      solvedIds,
+      savedIds,
+      currentStreak: user.currentStreak,
+      highestStreak: user.highestStreak,
+      heatmapData
+    });
+  } catch (error) {
+    console.error('User status error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

@@ -15,7 +15,7 @@ export default function LoginButton() {
         {session.user.image && (
           <img src={session.user.image} alt="Avatar" className="w-10 h-10 rounded-full border border-gray-700" />
         )}
-        <div className="flex flex-col hidden sm:flex">
+        <div className="hidden sm:flex sm:flex-col">
           <span className="text-sm font-medium text-gray-200">{session.user.name}</span>
           <span className="text-xs text-gray-500">{session.user.email}</span>
         </div>

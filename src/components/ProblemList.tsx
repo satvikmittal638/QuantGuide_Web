@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Target, CheckCircle, Star, Flame, Trophy, BarChart3, PieChart, Calendar, ArrowUp, ArrowDown } from 'lucide-react';
+import { Target, CheckCircle, Star, Flame, Trophy, BarChart3, PieChart, Calendar, ArrowUp, ArrowDown, Dices } from 'lucide-react';
 import { ActivityCalendar } from 'react-activity-calendar';
 
 interface Problem {
@@ -231,6 +231,27 @@ export default function ProblemList({ problems }: ProblemListProps) {
     return { difficultyCounts, topicCounts };
   }, [problems, solvedIds]);
 
+  const handleRandomProblem = async () => {
+    const params = new URLSearchParams();
+    if (topicFilter !== 'All') params.append('topic', topicFilter);
+    if (difficultyFilter !== 'All') params.append('difficulty', difficultyFilter);
+    if (sourceFilter !== 'All') params.append('source', sourceFilter);
+    
+    try {
+      const res = await fetch(`/api/problems/random?${params.toString()}`);
+      if (!res.ok) {
+        alert('No problems found matching these filters.');
+        return;
+      }
+      const data = await res.json();
+      if (data.problem) {
+        router.push(`/problems/${data.problem.id}`);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   if (!isMounted) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -360,7 +381,7 @@ export default function ProblemList({ problems }: ProblemListProps) {
         </h2>
         
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-          <div className="relative">
+          <div className="relative flex items-center gap-2">
             <input 
               ref={searchInputRef}
               type="text" 
@@ -369,6 +390,13 @@ export default function ProblemList({ problems }: ProblemListProps) {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="bg-gray-900 border border-gray-700 text-sm rounded-lg px-3 py-2 text-gray-300 focus:outline-none focus:border-blue-500 min-w-[200px]"
             />
+            <button 
+              onClick={handleRandomProblem}
+              className="p-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors flex items-center justify-center"
+              title="Pick Random Problem"
+            >
+              <Dices className="w-5 h-5" />
+            </button>
           </div>
           
           <input 
@@ -445,84 +473,140 @@ export default function ProblemList({ problems }: ProblemListProps) {
         </div>
       </div>
       
-      <div className="mt-8 overflow-x-auto rounded-2xl border border-gray-800 bg-[#0B0F19] shadow-2xl">
-        <table className="w-full text-left border-collapse whitespace-nowrap">
-          <thead>
-            <tr className="border-b border-gray-800 text-gray-400 text-sm font-semibold uppercase tracking-widest bg-gray-900/40">
-              <th className="py-5 px-8 w-16 text-center">#</th>
-              <th className="py-5 px-8">TITLE</th>
-              <th className="py-5 px-8">TOPIC</th>
-              <th className="py-5 px-8">DIFFICULTY</th>
-              <th className="py-5 px-8">SOURCE</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-800/60">
-            {paginatedProblems.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="text-center py-16 text-gray-400 text-lg">
-                  No problems match your filters.
-                </td>
+      <div className="mt-8 rounded-2xl border border-gray-800 bg-[#0B0F19] shadow-2xl overflow-hidden">
+        <div className="hidden sm:block overflow-x-auto">
+          <table className="w-full text-left border-collapse whitespace-nowrap">
+            <thead>
+              <tr className="border-b border-gray-800 text-gray-400 text-sm font-semibold uppercase tracking-widest bg-gray-900/40">
+                <th className="py-5 px-8 w-16 text-center">#</th>
+                <th className="py-5 px-8">TITLE</th>
+                <th className="py-5 px-8">TOPIC</th>
+                <th className="py-5 px-8">DIFFICULTY</th>
+                <th className="py-5 px-8">SOURCE</th>
               </tr>
-            ) : (
-              paginatedProblems.map((problem, index) => {
-                const isSolved = solvedSet.has(problem.id);
-                const isSaved = savedSet.has(problem.id);
-                const diff = problem.difficulty.toLowerCase();
-                const diffColor = diff === 'easy' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
-                                  diff === 'medium' ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 
-                                  'bg-red-500/10 text-red-400 border-red-500/20';
-                
-                const topic = problem.topic.toLowerCase();
-                const topicColor = topic.includes('probability') ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
-                                   topic.includes('brainteaser') ? 'bg-[#ff8a33]/10 text-[#ff8a33] border-[#ff8a33]/20' :
-                                   'bg-blue-500/10 text-blue-400 border-blue-500/20';
-                
-                return (
-                  <tr 
-                    key={problem.id} 
-                    id={`problem-${problem.id}`}
-                    onClick={() => {
-                      sessionStorage.setItem('qg_scroll_y', window.scrollY.toString());
-                      router.push(`/problems/${problem.id}`);
-                    }}
-                    className="hover:bg-gray-800/60 transition-all duration-200 group cursor-pointer"
-                  >
-                    <td className="py-6 px-8 text-gray-500 text-base text-center font-medium">
-                      {problem.qNo}
-                    </td>
-                    <td className="py-6 px-8">
-                      <Link 
-                        href={`/problems/${problem.id}`} 
-                        onClick={() => sessionStorage.setItem('qg_scroll_y', window.scrollY.toString())}
-                        className="flex items-center gap-3" 
-                        aria-label={`Go to ${problem.title}`}
-                      >
-                        <span className="text-lg font-bold text-gray-100 group-hover:text-blue-400 transition-colors">
-                          {problem.title}
+            </thead>
+            <tbody className="divide-y divide-gray-800/60">
+              {paginatedProblems.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="text-center py-16 text-gray-400 text-lg">
+                    No problems match your filters.
+                  </td>
+                </tr>
+              ) : (
+                paginatedProblems.map((problem, index) => {
+                  const isSolved = solvedSet.has(problem.id);
+                  const isSaved = savedSet.has(problem.id);
+                  const diff = problem.difficulty.toLowerCase();
+                  const diffColor = diff === 'easy' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
+                                    diff === 'medium' ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 
+                                    'bg-red-500/10 text-red-400 border-red-500/20';
+                  
+                  const topic = problem.topic.toLowerCase();
+                  const topicColor = topic.includes('probability') ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
+                                     topic.includes('brainteaser') ? 'bg-[#ff8a33]/10 text-[#ff8a33] border-[#ff8a33]/20' :
+                                     'bg-blue-500/10 text-blue-400 border-blue-500/20';
+                  
+                  return (
+                    <tr 
+                      key={problem.id} 
+                      id={`problem-${problem.id}`}
+                      onClick={() => {
+                        sessionStorage.setItem('qg_scroll_y', window.scrollY.toString());
+                        router.push(`/problems/${problem.id}`);
+                      }}
+                      className="hover:bg-gray-800/60 transition-all duration-200 group cursor-pointer"
+                    >
+                      <td className="py-6 px-8 text-gray-500 text-base text-center font-medium">
+                        {problem.qNo}
+                      </td>
+                      <td className="py-6 px-8">
+                        <Link 
+                          href={`/problems/${problem.id}`} 
+                          onClick={() => sessionStorage.setItem('qg_scroll_y', window.scrollY.toString())}
+                          className="flex items-center gap-3" 
+                          aria-label={`Go to ${problem.title}`}
+                        >
+                          <span className="text-lg font-bold text-gray-100 group-hover:text-blue-400 transition-colors">
+                            {problem.title}
+                          </span>
+                          {isSaved && <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />}
+                          {isSolved && <CheckCircle className="w-5 h-5 text-green-400" />}
+                        </Link>
+                      </td>
+                      <td className="py-6 px-8">
+                        <span className={`px-4 py-1.5 text-xs font-bold rounded-full border tracking-wider capitalize ${topicColor}`}>
+                          {problem.topic}
                         </span>
-                        {isSaved && <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />}
-                        {isSolved && <CheckCircle className="w-5 h-5 text-green-400" />}
-                      </Link>
-                    </td>
-                    <td className="py-6 px-8">
-                      <span className={`px-4 py-1.5 text-xs font-bold rounded-full border tracking-wider capitalize ${topicColor}`}>
-                        {problem.topic}
+                      </td>
+                      <td className="py-6 px-8">
+                        <span className={`px-4 py-1.5 text-xs font-bold rounded-full border tracking-wider uppercase ${diffColor}`}>
+                          {problem.difficulty}
+                        </span>
+                      </td>
+                      <td className="py-6 px-8 text-gray-400 text-sm font-medium">
+                        {problem.source}
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+        
+        {/* Mobile View */}
+        <div className="sm:hidden divide-y divide-gray-800/60">
+          {paginatedProblems.length === 0 ? (
+            <div className="text-center py-16 text-gray-400 text-lg">
+              No problems match your filters.
+            </div>
+          ) : (
+            paginatedProblems.map((problem) => {
+              const isSolved = solvedSet.has(problem.id);
+              const isSaved = savedSet.has(problem.id);
+              const diff = problem.difficulty.toLowerCase();
+              const diffColor = diff === 'easy' ? 'text-green-400 border-green-500/20' : 
+                                diff === 'medium' ? 'text-yellow-500 border-yellow-500/20' : 
+                                'text-red-400 border-red-500/20';
+              
+              return (
+                <div 
+                  key={problem.id}
+                  onClick={() => {
+                    sessionStorage.setItem('qg_scroll_y', window.scrollY.toString());
+                    router.push(`/problems/${problem.id}`);
+                  }}
+                  className="p-4 hover:bg-gray-800/60 transition-colors cursor-pointer flex flex-col gap-3"
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="flex gap-2 items-center">
+                      <span className="text-gray-500 font-medium text-sm">#{problem.qNo}</span>
+                      <span className="font-bold text-gray-100 text-base leading-tight">
+                        {problem.title}
                       </span>
-                    </td>
-                    <td className="py-6 px-8">
-                      <span className={`px-4 py-1.5 text-xs font-bold rounded-full border tracking-wider uppercase ${diffColor}`}>
-                        {problem.difficulty}
-                      </span>
-                    </td>
-                    <td className="py-6 px-8 text-gray-400 text-sm font-medium">
+                    </div>
+                    <div className="flex gap-1 flex-shrink-0">
+                      {isSaved && <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />}
+                      {isSolved && <CheckCircle className="w-4 h-4 text-green-400" />}
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2 items-center text-xs">
+                    <span className={`px-2 py-1 rounded-md border ${diffColor} font-bold uppercase`}>
+                      {problem.difficulty}
+                    </span>
+                    <span className="px-2 py-1 rounded-md border border-gray-700 bg-gray-800 text-gray-300 font-medium capitalize">
+                      {problem.topic}
+                    </span>
+                    <span className="text-gray-500 font-medium ml-auto">
                       {problem.source}
-                    </td>
-                  </tr>
-                )
-              })
-            )}
-          </tbody>
-        </table>
+                    </span>
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
       </div>
 
       {totalPages > 1 && (

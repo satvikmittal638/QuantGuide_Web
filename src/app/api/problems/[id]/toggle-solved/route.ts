@@ -22,12 +22,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     });
 
     if (existingSubmission) {
-      // Toggle off: Delete all correct submissions for this problem
+      // Toggle off: Delete all correct submissions for this problem that were manually marked
       await prisma.submission.deleteMany({
         where: {
           userId: session.user.id,
           problemId: resolvedParams.id,
-          isCorrect: true
+          isCorrect: true,
+          manuallyMarked: true
         }
       });
       return NextResponse.json({ isSolved: false });
@@ -37,7 +38,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         data: {
           userId: session.user.id,
           problemId: resolvedParams.id,
-          isCorrect: true
+          isCorrect: true,
+          manuallyMarked: true
         }
       });
       return NextResponse.json({ isSolved: true });

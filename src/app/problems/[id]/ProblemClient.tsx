@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import NextImage from 'next/image';
 import { useSession, signIn } from 'next-auth/react';
-import { ArrowLeft, ArrowRight, Lightbulb, CheckCircle2, XCircle, Loader2, Copy, Check, Star, Sparkles, MessageSquare, Send, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Lightbulb, CheckCircle2, XCircle, Loader2, Copy, Check, Star, Sparkles, MessageSquare, Send, ChevronDown, ChevronUp, Timer, ChevronRight, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function ProblemClient({ 
@@ -22,7 +22,10 @@ export default function ProblemClient({
   const [saving, setSaving] = useState(false);
   const [togglingSolved, setTogglingSolved] = useState(false);
   const [answer, setAnswer] = useState('');
-  const [hint, setHint] = useState<'show_hint' | 'show_solution' | null>(null);
+  const [showSolution, setShowSolution] = useState(false);
+  const [showHint1, setShowHint1] = useState(false);
+  const [showHint2, setShowHint2] = useState(false);
+  const [hintAspectRatio, setHintAspectRatio] = useState<number>(15);
   const [checking, setChecking] = useState(false);
   const [result, setResult] = useState<{correct: boolean; message: string} | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
@@ -36,7 +39,29 @@ export default function ProblemClient({
   const [commentError, setCommentError] = useState<string | null>(null);
   const [areCommentsLoaded, setAreCommentsLoaded] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  
+  // Timer State
+  const [timer, setTimer] = useState<number | null>(null);
+  const [timerInterval, setTimerInterval] = useState<NodeJS.Timeout | null>(null);
+  const [showTimerOptions, setShowTimerOptions] = useState(false);
+
+  // Notes State
+  const [note, setNote] = useState('');
+  const [isSavingNote, setIsSavingNote] = useState(false);
+
+  // Rating State
+  const [rating, setRating] = useState<number>(0);
+  const [avgRating, setAvgRating] = useState<number>(0);
+  const [ratingCount, setRatingCount] = useState<number>(0);
+  const [isRating, setIsRating] = useState(false);
+
   const router = useRouter();
+
+  useEffect(() => {
+    return () => {
+      if (timerInterval) clearInterval(timerInterval);
+    };
+  }, [timerInterval]);
 
   useEffect(() => {
     // Fetch problem status
@@ -47,9 +72,24 @@ export default function ProblemClient({
         if (data.isSolved) {
           setIsCorrect(true);
         }
+        if (data.note) {
+          setNote(data.note);
+        }
         setIsStatusLoading(false);
       })
       .catch(() => setIsStatusLoading(false));
+
+    // Fetch problem rating
+    fetch(`/api/problems/${problem.id}/rate`)
+      .then(res => res.json())
+      .then(data => {
+        if (!data.error) {
+          setAvgRating(data.average);
+          setRatingCount(data.count);
+          if (data.userRating) setRating(data.userRating);
+        }
+      })
+      .catch(console.error);
 
     // Fetch comments
     fetch(`/api/problems/${problem.id}/comments`)
@@ -180,6 +220,101 @@ export default function ProblemClient({
     }
   };
 
+  const voteComment = async (commentId: string, value: number) => {
+    if (!session?.user?.id) {
+      alert("Sign in to vote on comments");
+      return;
+    }
+    
+    // Optimistically update
+    setComments(comments.map(c => {
+      if (c.id === commentId) {
+        // Very basic optimistic update for display
+        const previousVote = c.userVote || 0;
+        const newScore = c.score - previousVote + value;
+        return { ...c, score: newScore, userVote: value };
+      }
+      return c;
+    }));
+
+    try {
+      await fetch(`/api/problems/${problem.id}/comments/vote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commentId, value })
+      });
+    } catch (e) {
+      console.error(e);
+      // We'd ideally rollback on error
+    }
+  };
+
+  const saveNote = async () => {
+    if (!isSaved) {
+      alert("You must save the problem first before adding a note.");
+      return;
+    }
+    setIsSavingNote(true);
+    try {
+      await fetch(`/api/problems/${problem.id}/save`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note })
+      });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSavingNote(false);
+    }
+  };
+
+  const submitRating = async (value: number) => {
+    if (!session) {
+      alert("You must be signed in to rate problems.");
+      return;
+    }
+    setRating(value);
+    setIsRating(true);
+    try {
+      const res = await fetch(`/api/problems/${problem.id}/rate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating: value })
+      });
+      const data = await res.json();
+      if (!data.error) {
+        setAvgRating(data.average);
+        setRatingCount(data.count);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsRating(false);
+    }
+  };
+
+  const startTimer = (minutes: number) => {
+    if (timerInterval) clearInterval(timerInterval);
+    setTimer(minutes * 60);
+    setShowTimerOptions(false);
+    const id = setInterval(() => {
+      setTimer(prev => {
+        if (prev === null || prev <= 0) {
+          clearInterval(id);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    setTimerInterval(id);
+  };
+  
+  const formatTimer = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
   const toggleSave = async () => {
     if (!session) {
       alert("You must be signed in to save problems.");
@@ -301,6 +436,43 @@ export default function ProblemClient({
               ))}
             </div>
           )}
+
+          {/* Timer Section */}
+          <div className="mb-6 flex items-center justify-between bg-gray-800/30 p-4 rounded-2xl border border-gray-700/50">
+            <div className="flex items-center gap-3">
+              <Timer className="w-5 h-5 text-blue-400" />
+              <span className="font-medium text-gray-300">Timed Practice Mode</span>
+            </div>
+            
+            {timer !== null ? (
+              <div className="flex items-center gap-4">
+                <div className={`text-2xl font-bold font-mono tracking-wider ${timer <= 60 && timer > 0 ? 'text-red-400 animate-pulse' : 'text-emerald-400'}`}>
+                  {formatTimer(timer)}
+                </div>
+                <button onClick={() => { if(timerInterval) clearInterval(timerInterval); setTimer(null); }} className="text-sm text-gray-400 hover:text-white">
+                  Clear
+                </button>
+              </div>
+            ) : (
+              <div className="relative">
+                <button 
+                  onClick={() => setShowTimerOptions(!showTimerOptions)}
+                  className="px-4 py-2 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-xl hover:bg-blue-600/30 transition-colors text-sm font-medium flex items-center gap-2"
+                >
+                  Start Timer
+                </button>
+                {showTimerOptions && (
+                  <div className="absolute top-full right-0 mt-2 bg-gray-800 border border-gray-700 rounded-xl shadow-xl z-10 w-32 overflow-hidden flex flex-col">
+                    {[5, 10, 15, 20].map(mins => (
+                      <button key={mins} onClick={() => startTimer(mins)} className="px-4 py-2 text-left hover:bg-gray-700 text-sm">
+                        {mins} Minutes
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           
           <div className="flex items-center justify-between mb-8">
             <h1 className="text-4xl font-extrabold text-white tracking-tight">{problem.title}</h1>
@@ -341,6 +513,27 @@ export default function ProblemClient({
               </button>
             </div>
           </div>
+          
+          <div className="flex items-center gap-2 mb-8">
+            <div className="flex">
+              {[1, 2, 3, 4, 5].map(star => (
+                <button
+                  key={star}
+                  onClick={() => submitRating(star)}
+                  disabled={isRating}
+                  className={`p-1 transition-colors ${
+                    star <= rating ? 'text-yellow-400' : 'text-gray-600 hover:text-yellow-400/50'
+                  }`}
+                >
+                  <Star className={`w-5 h-5 ${star <= rating ? 'fill-yellow-400' : ''}`} />
+                </button>
+              ))}
+            </div>
+            <span className="text-sm text-gray-400 font-medium">
+              {avgRating > 0 ? `${avgRating.toFixed(1)} / 5 (${ratingCount} reviews)` : 'No ratings yet'}
+            </span>
+          </div>
+
           <div className="mb-12 flex justify-start">
             <NextImage 
               src={`/images/problems/${encodeURIComponent(problem.title.replace(/ /g, '_').replace(/\//g, '').replace(/:/g, ''))}.png`}
@@ -388,40 +581,68 @@ export default function ProblemClient({
           <div className="border-t border-gray-800 pt-8 mt-8">
             <div className="flex items-center flex-wrap gap-4">
               <button
-                onClick={() => setHint(hint === 'show_solution' ? null : 'show_solution')}
+                onClick={() => setShowSolution(!showSolution)}
                 className="flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors"
               >
                 <Lightbulb className="w-4 h-4" />
-                <span>{hint === 'show_solution' ? 'Hide Full Solution' : 'View Full Solution'}</span>
+                <span>{showSolution ? 'Hide Full Solution' : 'View Full Solution'}</span>
               </button>
 
               {problem.source === 'QuantProf' && (
-                <button
-                  onClick={() => setHint(hint === 'show_hint' ? null : 'show_hint')}
-                  className="flex items-center gap-2 text-purple-400 hover:text-purple-300 transition-colors"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>{hint === 'show_hint' ? 'Hide Hint' : 'View Hint'}</span>
-                </button>
+                <>
+                  <button
+                    onClick={() => setShowHint1(!showHint1)}
+                    className="flex items-center gap-2 text-purple-400 hover:text-purple-300 transition-colors"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span>{showHint1 ? 'Hide Hint 1' : 'View Hint 1'}</span>
+                  </button>
+                  <button
+                    onClick={() => setShowHint2(!showHint2)}
+                    className="flex items-center gap-2 text-purple-400 hover:text-purple-300 transition-colors"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span>{showHint2 ? 'Hide Hint 2' : 'View Hint 2'}</span>
+                  </button>
+                </>
               )}
             </div>
 
-            {hint === 'show_hint' && problem.source === 'QuantProf' && (
-              <div className="mt-6 flex flex-col justify-start">
-                <NextImage 
+            {problem.source === 'QuantProf' && (showHint1 || showHint2) && (
+              <div className="mt-6 flex flex-col gap-4">
+                <img 
                   src={`/images/hints/${encodeURIComponent(problem.title.replace(/ /g, '_').replace(/\//g, '').replace(/:/g, ''))}.png`}
-                  alt="Hint"
-                  width={0}
-                  height={0}
-                  sizes="100vw"
-                  style={{ width: '100%', height: 'auto' }}
-                  className="max-w-full h-auto invert hue-rotate-180 mix-blend-screen opacity-90"
-                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  className="absolute opacity-0 pointer-events-none w-0 h-0"
+                  onLoad={(e) => {
+                    const aspect = e.currentTarget.naturalWidth / e.currentTarget.naturalHeight;
+                    if (aspect > 0 && isFinite(aspect)) setHintAspectRatio(aspect);
+                  }}
+                  alt="Hidden loader"
                 />
+
+                {showHint1 && (
+                  <div className="relative w-full overflow-hidden bg-gray-900/30 rounded-xl" style={{ paddingBottom: `${(1 / hintAspectRatio) * 50}%` }}>
+                    <img 
+                      src={`/images/hints/${encodeURIComponent(problem.title.replace(/ /g, '_').replace(/\//g, '').replace(/:/g, ''))}.png`}
+                      alt="Hint 1"
+                      className="absolute top-0 left-0 w-full h-[200%] max-w-none invert hue-rotate-180 mix-blend-screen opacity-90"
+                    />
+                  </div>
+                )}
+
+                {showHint2 && (
+                  <div className="relative w-full overflow-hidden bg-gray-900/30 rounded-xl" style={{ paddingBottom: `${(1 / hintAspectRatio) * 50}%` }}>
+                    <img 
+                      src={`/images/hints/${encodeURIComponent(problem.title.replace(/ /g, '_').replace(/\//g, '').replace(/:/g, ''))}.png`}
+                      alt="Hint 2"
+                      className="absolute bottom-0 left-0 w-full h-[200%] max-w-none invert hue-rotate-180 mix-blend-screen opacity-90"
+                    />
+                  </div>
+                )}
               </div>
             )}
             
-            {hint === 'show_solution' && (
+            {showSolution && (
               <div className="mt-6 flex flex-col justify-start">
                 <NextImage 
                   src={`/images/solutions/${encodeURIComponent(problem.title.replace(/ /g, '_').replace(/\//g, '').replace(/:/g, ''))}.png`}
@@ -436,6 +657,31 @@ export default function ProblemClient({
               </div>
             )}
           </div>
+          
+          {isSaved && (
+            <div className="border-t border-gray-800 pt-8 mt-8">
+              <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center gap-2">
+                <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                Bookmark Notes
+              </h3>
+              <div className="flex gap-4 flex-col sm:flex-row">
+                <input
+                  type="text"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="Add a private note about this problem..."
+                  className="flex-1 bg-gray-950 border border-gray-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all text-white placeholder-gray-600"
+                />
+                <button
+                  onClick={saveNote}
+                  disabled={isSavingNote}
+                  className="bg-yellow-600 hover:bg-yellow-700 disabled:opacity-50 text-white font-semibold py-3 px-6 rounded-xl transition-all shadow-lg flex items-center justify-center min-w-[100px]"
+                >
+                  {isSavingNote ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Save Note'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Discussion Section */}
@@ -524,6 +770,17 @@ export default function ProblemClient({
                             <p className="font-medium text-gray-200">{comment.user?.name || 'Anonymous User'}</p>
                             <p className="text-xs text-gray-500">{formatDistanceToNow(new Date(comment.createdAt))} ago</p>
                           </div>
+                        </div>
+                        <div className="flex items-center gap-2 bg-gray-900/50 rounded-lg p-1 border border-gray-800">
+                          <button onClick={() => voteComment(comment.id, 1)} className={`p-1 rounded hover:bg-gray-800 transition-colors ${comment.userVote === 1 ? 'text-green-400' : 'text-gray-400'}`}>
+                            <ThumbsUp className="w-4 h-4" />
+                          </button>
+                          <span className={`text-xs font-bold w-4 text-center ${comment.score > 0 ? 'text-green-400' : comment.score < 0 ? 'text-red-400' : 'text-gray-400'}`}>
+                            {comment.score || 0}
+                          </span>
+                          <button onClick={() => voteComment(comment.id, -1)} className={`p-1 rounded hover:bg-gray-800 transition-colors ${comment.userVote === -1 ? 'text-red-400' : 'text-gray-400'}`}>
+                            <ThumbsDown className="w-4 h-4" />
+                          </button>
                         </div>
                       </div>
                       <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">{comment.text}</p>

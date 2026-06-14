@@ -9,6 +9,11 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
     const body = await req.json();
     const { answer } = body;
     
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user || !session.user.id) {
+      return NextResponse.json({ error: 'You must be logged in to submit answers.' }, { status: 401 });
+    }
+
     const problem = await prisma.problem.findUnique({ where: { id: params.id } });
     if (!problem) return NextResponse.json({ error: 'Problem not found' }, { status: 404 });
     
@@ -32,11 +37,6 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
     // Increase tolerance to 1e-3 for rounding differences (e.g. 0.5039 vs 0.503937)
     const isCorrect = !isNaN(submittedNum) && !isNaN(correctNum) && Math.abs(submittedNum - correctNum) < 1e-3;
 
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user || !session.user.id) {
-      return NextResponse.json({ error: 'You must be logged in to submit answers.' }, { status: 401 });
-    }
-
     const user = await prisma.user.findUnique({ where: { id: session.user.id } });
     if (!user) {
       return NextResponse.json({ error: 'User not found in database.' }, { status: 404 });
@@ -50,14 +50,15 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
       if (!lastActive) {
          newStreak = 1;
       } else {
-         const diffTime = Math.abs(now.getTime() - lastActive.getTime());
-         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-         if (diffDays === 1 || diffDays === 0) { // If same day, don't increment, but wait, maybe increment if it's a new day? Let's just keep it simple: any correct answer updates activity. For a true streak we'd check calendar days.
-           if (diffDays === 1) newStreak += 1;
-           // if 0, streak remains same
+         const today = new Date(now.toDateString());
+         const lastDay = new Date(lastActive.toDateString());
+         const diffDays = Math.round((today.getTime() - lastDay.getTime()) / (1000 * 60 * 60 * 24)); 
+         if (diffDays === 1) {
+           newStreak += 1;
          } else if (diffDays > 1) {
            newStreak = 1;
          }
+         // if diffDays === 0, streak remains the same
       }
       
       await prisma.user.update({
@@ -80,6 +81,6 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
     
     return NextResponse.json({ correct: isCorrect });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

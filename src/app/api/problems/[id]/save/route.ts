@@ -46,3 +46,40 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  try {
+    const { id: problemId } = await context.params;
+    
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user || !session.user.id) {
+      return NextResponse.json({ error: 'You must be logged in to save notes.' }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const { note } = body;
+
+    const existing = await prisma.savedProblem.findUnique({
+      where: {
+        userId_problemId: {
+          userId: session.user.id,
+          problemId
+        }
+      }
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: 'Problem must be saved first before adding notes.' }, { status: 400 });
+    }
+
+    const updated = await prisma.savedProblem.update({
+      where: { id: existing.id },
+      data: { note }
+    });
+
+    return NextResponse.json({ success: true, note: updated.note });
+  } catch (error) {
+    console.error('Error in save note endpoint:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

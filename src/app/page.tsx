@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma';
-import { Flame, Trophy } from 'lucide-react';
 import ProblemList from '@/components/ProblemList';
 import LoginButton from '@/components/LoginButton';
+import DailyChallenge from '@/components/DailyChallenge';
 import { unstable_cache } from 'next/cache';
 
 const getCachedProblems = unstable_cache(
@@ -45,6 +45,9 @@ export default async function Home() {
             <LoginButton />
           </div>
         </div>
+
+        {/* Daily Challenge */}
+        <DailyChallenge />
 
         {/* Problem List */}
         <ProblemList problems={problems as any} />
