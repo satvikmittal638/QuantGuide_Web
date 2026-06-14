@@ -71,13 +71,36 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
       });
     }
     
-    await prisma.submission.create({
-      data: {
-        userId: user.id,
-        problemId: problem.id,
-        isCorrect: isCorrect,
-      }
+    const existingSubmission = await prisma.submission.findFirst({
+      where: { userId: user.id, problemId: problem.id }
     });
+
+    if (existingSubmission) {
+      if (!existingSubmission.isCorrect && isCorrect) {
+        // Upgrade to correct
+        await prisma.submission.update({
+          where: { id: existingSubmission.id },
+          data: { isCorrect: true, submittedAt: new Date(), userAnswer: answer }
+        });
+      } else if (!existingSubmission.isCorrect && !isCorrect) {
+        // Update wrong answer timestamp
+        await prisma.submission.update({
+          where: { id: existingSubmission.id },
+          data: { submittedAt: new Date(), userAnswer: answer }
+        });
+      }
+      // If already correct, do NOT create a new submission or overwrite the timestamp.
+    } else {
+      // First attempt ever
+      await prisma.submission.create({
+        data: {
+          userId: user.id,
+          problemId: problem.id,
+          isCorrect: isCorrect,
+          userAnswer: answer
+        }
+      });
+    }
     
     return NextResponse.json({ correct: isCorrect });
   } catch (error: any) {
