@@ -80,13 +80,13 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
         // Upgrade to correct
         await prisma.submission.update({
           where: { id: existingSubmission.id },
-          data: { isCorrect: true, submittedAt: new Date(), userAnswer: answer }
+          data: { isCorrect: true, submittedAt: new Date() }
         });
       } else if (!existingSubmission.isCorrect && !isCorrect) {
         // Update wrong answer timestamp
         await prisma.submission.update({
           where: { id: existingSubmission.id },
-          data: { submittedAt: new Date(), userAnswer: answer }
+          data: { submittedAt: new Date() }
         });
       }
       // If already correct, do NOT create a new submission or overwrite the timestamp.
@@ -96,8 +96,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
         data: {
           userId: user.id,
           problemId: problem.id,
-          isCorrect: isCorrect,
-          userAnswer: answer
+          isCorrect: isCorrect
         }
       });
     }
