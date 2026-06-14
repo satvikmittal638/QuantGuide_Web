@@ -41,6 +41,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ userId: 
       prisma.submission.findMany({
         where: { userId },
         orderBy: { submittedAt: 'desc' },
+        distinct: ['problemId'],
         take: 10,
         include: {
           problem: {
