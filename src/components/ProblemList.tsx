@@ -171,7 +171,8 @@ export default function ProblemList({ problems }: ProblemListProps) {
                           (statusFilter === 'Saved' && isSaved);
                           
       const matchSource = sourceFilter === 'All' || p.source === sourceFilter;
-      const matchLevel = levelFilter === 'All' || (p.level && p.level.toString() === levelFilter);
+      const isActiveLevelFilter = sourceFilter === 'QuantProf' || sourceFilter === 'All';
+      const matchLevel = !isActiveLevelFilter || levelFilter === 'All' || (p.level && p.level.toString() === levelFilter);
       const matchCompany = companyFilter === 'All' || (p.companies && p.companies.toLowerCase().includes(companyFilter.toLowerCase()));
 
       const matchMin = minQuestionNo === '' || p.qNo! >= parseInt(minQuestionNo);
