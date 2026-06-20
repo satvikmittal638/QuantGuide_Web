@@ -154,9 +154,11 @@ export default function ProblemList({ problems }: ProblemListProps) {
 
   const filteredProblems = useMemo(() => {
     let result = problemsWithQNo.filter(p => {
-      const q = searchQuery.toLowerCase();
-      const matchSearch = p.title.toLowerCase().includes(q) || 
-                          (p.description && p.description.toLowerCase().includes(q));
+      const q = searchQuery.toLowerCase().replace(/\s+/g, '');
+      const matchSearch = p.title.toLowerCase().replace(/\s+/g, '').includes(q) || 
+                          (p.description && p.description.toLowerCase().replace(/\s+/g, '').includes(q)) ||
+                          (p.source && p.source.toLowerCase().replace(/\s+/g, '').includes(q)) ||
+                          (p.companies && p.companies.toLowerCase().replace(/\s+/g, '').includes(q));
       
       const matchTopic = topicFilter === 'All' || p.topic.toLowerCase() === topicFilter;
       const matchDifficulty = difficultyFilter === 'All' || p.difficulty.toLowerCase() === difficultyFilter;
