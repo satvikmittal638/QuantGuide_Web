@@ -90,16 +90,35 @@ export default function ProblemList({ problems }: ProblemListProps) {
       }, 50);
     }
 
-    // Fetch user status
-    fetch('/api/user/status')
-      .then(res => res.json())
-      .then(data => {
+    // Optimistic UI load from localStorage
+    const cachedStatus = localStorage.getItem('qg_user_status');
+    if (cachedStatus) {
+      try {
+        const data = JSON.parse(cachedStatus);
         setSolvedIds(data.solvedIds || []);
         setSavedIds(data.savedIds || []);
         setCurrentStreak(data.currentStreak || 0);
         setHighestStreak(data.highestStreak || 0);
         setHeatmapData(data.heatmapData || []);
         setIsStatusLoaded(true);
+      } catch (e) {
+        console.error('Failed to parse cached status', e);
+      }
+    }
+
+    // Fetch fresh user status
+    fetch('/api/user/status')
+      .then(res => res.json())
+      .then(data => {
+        if (!data.error) {
+          localStorage.setItem('qg_user_status', JSON.stringify(data));
+          setSolvedIds(data.solvedIds || []);
+          setSavedIds(data.savedIds || []);
+          setCurrentStreak(data.currentStreak || 0);
+          setHighestStreak(data.highestStreak || 0);
+          setHeatmapData(data.heatmapData || []);
+          setIsStatusLoaded(true);
+        }
       })
       .catch(err => {
         console.error('Failed to fetch user status', err);
@@ -255,7 +274,7 @@ export default function ProblemList({ problems }: ProblemListProps) {
     }
   };
 
-  if (!isMounted) {
+  if (!isMounted || !isStatusLoaded) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
