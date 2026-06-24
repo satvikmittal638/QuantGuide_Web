@@ -7,6 +7,7 @@ import NextImage from 'next/image';
 import { useSession, signIn } from 'next-auth/react';
 import { ArrowLeft, ArrowRight, Lightbulb, CheckCircle2, XCircle, Loader2, Copy, Check, Star, Sparkles, MessageSquare, Send, ChevronDown, ChevronUp, Timer, ChevronRight, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import hintsData from '@/data/hintsData.json';
 
 export default function ProblemClient({ 
   problem, 
@@ -598,15 +599,17 @@ export default function ProblemClient({
                     className="flex items-center gap-2 text-purple-400 hover:text-purple-300 transition-colors"
                   >
                     <Sparkles className="w-4 h-4" />
-                    <span>{showHint1 ? 'Hide Hint 1' : 'View Hint 1'}</span>
+                    <span>{showHint1 ? ((hintsData as Record<string, number>)[problem.title] === 2 ? 'Hide Hint 1' : 'Hide Hint') : ((hintsData as Record<string, number>)[problem.title] === 2 ? 'View Hint 1' : 'View Hint')}</span>
                   </button>
-                  <button
-                    onClick={() => setShowHint2(!showHint2)}
-                    className="flex items-center gap-2 text-purple-400 hover:text-purple-300 transition-colors"
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    <span>{showHint2 ? 'Hide Hint 2' : 'View Hint 2'}</span>
-                  </button>
+                  {(hintsData as Record<string, number>)[problem.title] === 2 && (
+                    <button
+                      onClick={() => setShowHint2(!showHint2)}
+                      className="flex items-center gap-2 text-purple-400 hover:text-purple-300 transition-colors"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      <span>{showHint2 ? 'Hide Hint 2' : 'View Hint 2'}</span>
+                    </button>
+                  )}
                 </>
               )}
             </div>
@@ -625,16 +628,19 @@ export default function ProblemClient({
                   />
 
                   {showHint1 && (
-                    <div className="relative w-full overflow-hidden bg-gray-900/30 rounded-xl" style={{ paddingBottom: `${(1 / hintAspectRatio) * 50}%` }}>
+                    <div 
+                      className="relative w-full overflow-hidden bg-gray-900/30 rounded-xl" 
+                      style={{ paddingBottom: `${(1 / hintAspectRatio) * ((hintsData as Record<string, number>)[problem.title] === 2 ? 50 : 100)}%` }}
+                    >
                       <img 
                         src={`/images/hints/${encodeURIComponent(problem.title.replace(/ /g, '_').replace(/\//g, '').replace(/:/g, ''))}.png`}
-                        alt="Hint 1"
-                        className="absolute top-0 left-0 w-full h-[200%] max-w-none invert hue-rotate-180 mix-blend-screen opacity-90"
+                        alt={(hintsData as Record<string, number>)[problem.title] === 2 ? "Hint 1" : "Hint"}
+                        className={`absolute top-0 left-0 w-full ${(hintsData as Record<string, number>)[problem.title] === 2 ? 'h-[200%]' : 'h-full'} max-w-none invert hue-rotate-180 mix-blend-screen opacity-90`}
                       />
                     </div>
                   )}
 
-                  {showHint2 && (
+                  {(hintsData as Record<string, number>)[problem.title] === 2 && showHint2 && (
                     <div className="relative w-full overflow-hidden bg-gray-900/30 rounded-xl" style={{ paddingBottom: `${(1 / hintAspectRatio) * 50}%` }}>
                       <img 
                         src={`/images/hints/${encodeURIComponent(problem.title.replace(/ /g, '_').replace(/\//g, '').replace(/:/g, ''))}.png`}
